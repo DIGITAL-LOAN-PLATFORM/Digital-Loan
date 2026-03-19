@@ -1,7 +1,7 @@
 
 namespace Domain.Entities
 {
-    public class Account
+    public class RequirementDocument
     {
         public int Id { get; set; }
         public string? DocumentName { get; set; }
