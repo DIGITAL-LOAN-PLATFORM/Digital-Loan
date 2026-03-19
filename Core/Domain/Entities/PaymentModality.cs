@@ -1,9 +1,9 @@
 namespace Domain.Entities
 {
-    public class LoanApplication
+    public class PaymentModality
     {
         public int Id { get; set; }
-        public string Modality { get; set; }
+        public string? Modality { get; set; }
        
     }
 }
