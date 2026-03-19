@@ -1,0 +1,14 @@
+namespace Domain.Entity
+{
+    public class Guarantor
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public DateTime DOB { get; set; }
+        public string Email { get; set; }
+        public string Phone { get; set; }
+        public string Address { get; set; }
+        public LoanApplication LoanApplication { get; set; }
+        public GuarantorType GuarantorType { get; set; }
+    }
+}
