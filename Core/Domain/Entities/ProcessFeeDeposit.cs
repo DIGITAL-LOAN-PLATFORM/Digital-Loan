@@ -1,6 +1,6 @@
-using Domain.Entities;
 
-namespace Domain.Entity
+
+namespace Domain.Entities
 {
     public class ProcessFeeDeposit
     {

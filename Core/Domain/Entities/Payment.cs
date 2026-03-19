@@ -1,12 +1,14 @@
 
-using Domain.Entity;
+
 namespace Domain.Entities{
 
     public class Payment{
 
         public int Id { get; set; }
+        public int LoanDisbursementId { get; set; }
         public LoanDisbursement LoanDisbursement { get; set; }
-        public  decimal AmountPaid  { get; set; }
+        public  decimal TotalAmountPaid  { get; set; }
+        public decimal PenaltyAllocated { get; set; }
         public PaymentType PaymentType{ get; set;}
         public Account Account{ get; set;}
         public DateTime PaymentDate {get;set;}
