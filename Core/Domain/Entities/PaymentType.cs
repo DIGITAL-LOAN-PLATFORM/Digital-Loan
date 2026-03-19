@@ -1,4 +1,4 @@
-namespace Domain.Entity
+namespace Domain.Entities
 {
     public class PaymentType
     {
