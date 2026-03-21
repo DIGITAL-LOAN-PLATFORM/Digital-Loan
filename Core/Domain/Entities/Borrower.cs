@@ -1,3 +1,5 @@
+using Domain.ValueObjects;
+
 namespace Domain.Entities{
 
     public class Borrower{
@@ -12,14 +14,12 @@ namespace Domain.Entities{
         public DateTime? DOB { get; set;}
         public string? MaritalStatus { get; set;}
         public string? SpouseName { get; set;}
-        public string? SpouseId { get; set;}
-         public DateTime CreatedAt { get; set; }
+        public string? SpouseNidaNumber { get; set;}
+        public Location HomeLocation { get; set; } 
+         public bool IsActive { get; set; } = true; 
 
-         //  Location Management 
-    public string Province { get; set; } = string.Empty;
-    public string District { get; set; } = string.Empty;
-    public string Sector { get; set; } = string.Empty;
-    public string Cell { get; set; } = string.Empty;
-    public string Village { get; set; } = string.Empty;
+        // Audit fields required by the System of Record
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? UpdatedAt { get; set; }
     }
 }
