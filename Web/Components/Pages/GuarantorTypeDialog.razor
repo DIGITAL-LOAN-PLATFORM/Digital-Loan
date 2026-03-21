@@ -1,0 +1,98 @@
+@using Application.DTO
+@using Application.Services
+@using Domain.Entities
+@using MudBlazor
+
+@inject ISnackbar Snackbar
+@inject IGuarantorTypeService GuarantorTypeService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@(IsEditMode ? Icons.Material.Filled.Edit : Icons.Material.Filled.AddCircle)" Class="mr-2 mb-1"/>
+            @(IsEditMode ? "Update Guarantor Type" : "Add New Guarantor Type")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField T="string" 
+                                  Label="Guarantor Type Name" 
+                                  Required="true" 
+                                  RequiredError="Name is required!"
+                                  @bind-Value="Model.Name" 
+                                  Variant="Variant.Outlined" 
+                                  Margin="Margin.Normal"/>
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   OnClick="Submit" 
+                   Disabled="@_processing">
+            @(_processing ? "Processing..." : (IsEditMode ? "Update" : "Save"))
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    // Pass the existing ID if editing
+    [Parameter] public int? GuarantorTypeId { get; set; }
+    [Parameter] public string? InitialName { get; set; }
+
+    private MudForm? form;
+    private bool _processing = false;
+    private CreateGuarantorTypeDTO Model = new();
+    private bool IsEditMode => GuarantorTypeId.HasValue && GuarantorTypeId.Value != 0;
+
+    protected override void OnInitialized()
+    {
+        if (IsEditMode)
+        {
+            Model.Name = InitialName ?? "";
+        }
+    }
+
+    private async Task Submit()
+    {
+        if (form == null) return;
+        
+        await form.ValidateAsync();
+        if (!form.IsValid) return;
+
+        _processing = true;
+        try
+        {
+            if (IsEditMode)
+            {
+                // Note: Ensure your Service/Interface name matches (UpdateBorrowerAsync or UpdateGuarantorTypeAsync)
+                var updateDto = new UpdateGuarantorTypeDTO { Name = Model.Name };
+                await GuarantorTypeService.UpdateGuarantorAsync(GuarantorTypeId!.Value, updateDto);
+                Snackbar.Add("Guarantor Type updated successfully", Severity.Success);
+            }
+            else
+            {
+                await GuarantorTypeService.CreateGuarantorTypeAsync(Model);
+                Snackbar.Add("Guarantor Type created successfully", Severity.Success);
+            }
+            
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}
