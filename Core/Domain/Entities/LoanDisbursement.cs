@@ -7,6 +7,7 @@ namespace Domain.Entities
         public int Id { get; set; }
         public int LoanApplicationId { get; set; }
         public LoanApplication LoanApplication { get; set; }
+        public int PaymentModalityId { get; set; }
         public PaymentModality PaymentModality { get; set; }
         public float DisbursedAmount { get; set; }
         public string PaymentMode { get; set; }
