@@ -1,9 +1,22 @@
 ﻿<MudNavMenu>
-    <MudNavLink Href="/" Match="NavLinkMatch.All">Dashboard</MudNavLink>
-    <MudNavLink Href="/borrowers" Match="NavLinkMatch.Prefix">Borrower</MudNavLink>
-    <MudNavGroup Title="Settings" Expanded="true">
-        <MudNavLink Href="/users"  Match="NavLinkMatch.Prefix">Users</MudNavLink>
-        <MudNavLink Href="/security"  Match="NavLinkMatch.Prefix">Security</MudNavLink>
+    <div class="d-flex align-center px-4 py-2 nav-section-title rounded-lg mx-2">
+        <MudIcon Icon="@Icons.Material.Filled.Home" Color="Color.Primary" Size="Size.Small" Class="mr-2"/>
+        <MudText Typo="Typo.subtitle2" Style="font-weight: bold;">Loan Mgnt</MudText>
+    </div>
+    
+    <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+    <MudNavLink Href="/borrowers" Icon="@Icons.Material.Filled.People">Borrower</MudNavLink>
+
+    <MudDivider Class="my-2" />
+
+    <div class="d-flex align-center px-4 py-2 nav-section-title rounded-lg mx-2">
+        <MudIcon Icon="@Icons.Material.Filled.Build" Color="Color.Secondary" Size="Size.Small" Class="mr-2"/>
+        <MudText Typo="Typo.subtitle2" Style="font-weight: bold;">Settings</MudText>
+    </div>
+
+    <MudNavGroup Title="Setting" Icon="@Icons.Material.Filled.Settings">
+        <MudNavLink Href="/guarantortype">Guarantor Type</MudNavLink>
+        <MudNavLink Href="/paymentmodality">Payment Modality</MudNavLink>
+        <MudNavLink Href="/loanproducts">Loan Products</MudNavLink>
     </MudNavGroup>
-    <MudNavLink Href="/about"  Match="NavLinkMatch.Prefix">About</MudNavLink>
 </MudNavMenu>

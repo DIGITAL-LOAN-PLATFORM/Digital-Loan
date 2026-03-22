@@ -28,6 +28,9 @@ builder.Services.AddRazorComponents()
     builder.Services.AddControllers();
 
     builder.Services.AddScoped<IBorrowerService, BorrowerService>();
+    builder.Services.AddScoped<IGuarantorTypeService, GuarantorTypeService>();
+    builder.Services.AddScoped<IPaymentModalityService, PaymentModalityService>();
+    builder.Services.AddScoped<ILoanProductService, LoanProductService>();
     
     // LocationService registered using factory - resolves namespace issue
     // LocationService now properly registered via ServiceContainer

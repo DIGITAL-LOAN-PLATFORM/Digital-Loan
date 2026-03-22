@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Runtime.InteropServices.Marshalling;
 
 namespace Domain.Entities
@@ -5,7 +6,7 @@ namespace Domain.Entities
     public class LoanApplication
     {
         public int Id { get; set; }
-        
+        [Required]
         public string ApplicationNumber { get; set; } = string.Empty;
         public int ProductId { get; set; }
         public LoanProduct loanProduct{ get; set; }
@@ -14,6 +15,7 @@ namespace Domain.Entities
         public int ModalityId { get; set;}
         public PaymentModality paymentModality { get; set; }
         public decimal RequestedAmount { get; set;}
+        public int LoanTerm { get; set; }
         public string Purpose {get; set; }
         public DateTime DateOfApplication { get; set; }
         public string? Status { get; set;} ="Pending";
