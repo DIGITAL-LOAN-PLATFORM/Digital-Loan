@@ -11,6 +11,7 @@ using Application.Services.Borrowers;
 using System;
 using System.IO;
 using System.Text.Json;
+using Application.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +32,8 @@ builder.Services.AddRazorComponents()
     builder.Services.AddScoped<IGuarantorTypeService, GuarantorTypeService>();
     builder.Services.AddScoped<IPaymentModalityService, PaymentModalityService>();
     builder.Services.AddScoped<ILoanProductService, LoanProductService>();
+    builder.Services.AddScoped<IGuarantorService, GuarantorService>();
+    builder.Services.AddScoped<ILoanApplicationService, LoanApplicationService>();
     
     // LocationService registered using factory - resolves namespace issue
     // LocationService now properly registered via ServiceContainer

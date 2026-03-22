@@ -11,6 +11,7 @@ using Application.Services.Locations;
 
 using Domain.Entities;
 using Infrastructure.Repository;
+using Application.Interfaces;
 
 
 namespace Infrastructure.DependencyInjection
@@ -31,6 +32,8 @@ namespace Infrastructure.DependencyInjection
                 services.AddScoped<IGuarantorType, GuarantorTypeRepository>();
                 services.AddScoped<IPaymentModality, PaymentModalityRepository>();
                 services.AddScoped<ILoanProduct, LoanProductRepository>();
+                services.AddScoped<IGuarantor, GuarantorRepository>();
+                services.AddScoped<ILoanApplication, LoanApplicationRepository>();
                 services.AddScoped<global::Application.Interface.ILocationService, global::Application.Services.Locations.LocationService>();
                 // ILocationService directly registered via app services (in Program.cs)
                
