@@ -5,6 +5,8 @@ namespace Domain.Entities
     public class LoanApplication
     {
         public int Id { get; set; }
+        
+        public string ApplicationNumber { get; set; } = string.Empty;
         public int ProductId { get; set; }
         public LoanProduct loanProduct{ get; set; }
         public int BorrowerId { get; set; }
@@ -16,7 +18,15 @@ namespace Domain.Entities
         public DateTime DateOfApplication { get; set; }
         public string? Status { get; set;} ="Pending";
         public DateTime PreferedDate { get; set; }
-        public List<Guarantor> Guarantors { get; set; } = new();
+       
+        public string? ApprovedById { get; set; } // The ID of the Staff/Manager
+        public DateTime? ApprovalDate { get; set; }
+        public string? ApprovalRemarks { get; set; } // Notes from the manager
+
+
+        public string? RejectionReason { get; set; }
+        public DateTime? RejectionDate { get; set; }
+       
 
     }
 }
