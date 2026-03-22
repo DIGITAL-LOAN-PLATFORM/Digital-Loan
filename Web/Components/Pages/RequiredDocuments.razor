@@ -1,0 +1,161 @@
+@page "/requiredocuments"
+@using Microsoft.AspNetCore.Authorization
+@using Application.Services.RequiredDocuments
+@using Application.DTO
+@using MudBlazor
+@inject IRequiredDocumentService RequiredDocumentService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@using RDEntity = Domain.Entities.RequiredDocument
+
+<PageTitle>Required Document List</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <MudText Typo="Typo.h4" Class="mb-4">Required Document List</MudText>
+
+     <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="@(() => OpenCreateDialog())">
+                Add Required Document
+            </MudButton>
+
+    <MudDataGrid T="RDEntity"
+                 Items="requiredDocuments"
+                 Hover="true"
+                 Striped="true"
+                 Dense="true"
+                 FilterMode="DataGridFilterMode.ColumnFilterRow"
+                 Loading="@loading"
+                 LoadingProgressColor="Color.Info">
+        <Columns>
+            <PropertyColumn Property="x => x.DocumentName" Title="Document Name" Sortable="true" Filterable="true" />
+            <PropertyColumn Property="x => x.DocumentType" Title="Document Type" Sortable="true" Filterable="true" />
+            
+            <TemplateColumn Title="Actions" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudButtonGroup Variant="Variant.Text" Size="Size.Small">
+                        <MudButton Color="Color.Primary"
+                                   Variant="Variant.Text"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Visibility"
+                                   OnClick="@(() => ViewRequiredDocument(context.Item))">
+                            View
+                        </MudButton>
+                        <MudButton Color="Color.Secondary"
+                                   Variant="Variant.Text"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Edit"
+                                   OnClick="@(() => OpenEditDialog(context.Item))">
+                            Edit
+                        </MudButton>
+                    </MudButtonGroup>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent>
+            <MudDataGridPager T="RDEntity" /> 
+        </PagerContent>
+    </MudDataGrid>
+</MudContainer>
+
+@code {
+    private List<Domain.Entities.RequiredDocument> requiredDocuments = new();
+    private bool loading = false;
+
+    protected override void OnInitialized()
+    {
+        LoadRequiredDocuments();
+    }
+
+    private void LoadRequiredDocuments()
+    {
+        loading = true;
+        try
+        {
+            requiredDocuments = RequiredDocumentService.GetAllRequiredDocuments(new FilterRequiredDocumentDTO());
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            ["IsCreate"] = true,
+            ["CreateModel"] = new CreateRequiredDocumentDTO()
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<RequiredDocumentDialog>("Create Required Document", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled && result.Data is CreateRequiredDocumentDTO createDto)
+        {
+            try
+            {
+                RequiredDocumentService.CreateRequiredDocument(createDto);
+                Snackbar.Add("Document created successfully", Severity.Success);
+                LoadRequiredDocuments();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error creating document: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task OpenEditDialog(Domain.Entities.RequiredDocument requiredDocument)
+    {
+        var updateDto = new UpdateRequiredDocumentDTO
+        {
+            DocumentName = requiredDocument.DocumentName,
+            DocumentType = requiredDocument.DocumentType,
+        };
+
+        var parameters = new DialogParameters
+        {
+            ["IsCreate"] = false,
+            ["UpdateModel"] = updateDto
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<RequiredDocumentDialog>("Edit Required Document", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled && result.Data is UpdateRequiredDocumentDTO updateModel)
+        {
+            try
+            {
+                RequiredDocumentService.UpdateRequiredDocument(requiredDocument.Id, updateModel);
+                Snackbar.Add("Document updated successfully", Severity.Success);
+                LoadRequiredDocuments();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error updating document: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private void ViewRequiredDocument(Domain.Entities.RequiredDocument requiredDocument)
+    {
+        Navigation.NavigateTo($"/requiredocuments/{requiredDocument.Id}");
+    }
+}

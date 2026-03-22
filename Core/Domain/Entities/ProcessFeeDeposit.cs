@@ -1,3 +1,4 @@
+using Domain.Entities;
 namespace Domain.Entity
 {
     public class ProcessFeeDeposit
