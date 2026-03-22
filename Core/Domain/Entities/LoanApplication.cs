@@ -19,7 +19,9 @@ namespace Domain.Entities
         public string Purpose {get; set; }
         public DateTime DateOfApplication { get; set; }
         public string? Status { get; set;} ="Pending";
-        public DateTime PreferedDate { get; set; }
+        public List<Guarantor> Guarantors { get; set; } = new();
+        public List<ProvidedDocument> ProvidedDocuments { get; set; } = new();
+
        
         public string? ApprovedById { get; set; } // The ID of the Staff/Manager
         public DateTime? ApprovalDate { get; set; }
