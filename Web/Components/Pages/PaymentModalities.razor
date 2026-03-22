@@ -1,0 +1,74 @@
+@page "/paymentmodality"
+
+@using Application.Services
+@using Domain.Entities
+
+@inject IPaymentModalityService PaymentModalityService
+@inject IDialogService DialogService
+
+
+<PageTitle>PaymentModality</PageTitle>
+<MudPaper Class="pa-4">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(()=>OpenDialog())">Add PaymentModality</MudButton>
+    </div>
+
+    <MudDataGrid Items="@paymentmodalities" Hoverable="true" Striped="true" Bordered="true" Class="mud-elevation-1">
+        <Columns>
+            <PropertyColumn Property="x => x.Id" Title="Id" />
+            <PropertyColumn Property="x => x.Modality" Title="Name" />
+          
+            <TemplateColumn Title="Actions" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudButton Href="@($"/PaymentModalities/{context.Item.Id}")" 
+                               Variant="Variant.Filled" 
+                               Color="Color.Info"
+                               Size="Size.Small"
+                               Class="mx-1">
+                        View Details
+                    </MudButton>
+                    <MudButton Href="@($"/PaymentModalities/edit/{context.Item.Id}")" 
+                               Variant="Variant.Filled" 
+                               Color="Color.Warning" 
+                               StartIcon="@Icons.Material.Filled.Edit"
+                               Size="Size.Small"
+                               Class="mx-1">
+                        Edit
+                    </MudButton>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+    </MudDataGrid>
+     </MudPaper>
+
+
+
+@code 
+{
+    bool disabled = false;
+    List<PaymentModality> paymentmodalities = new List<PaymentModality>();
+
+    
+    protected override async Task OnInitializedAsync()
+    {
+        
+        paymentmodalities = await PaymentModalityService.GetAllPaymentModalitiesAsync();
+    }
+
+    private async Task OpenDialog(GuarantorType? guarantortype = null)
+    {
+        var dialog = await DialogService.ShowAsync<PaymentModalityDialog>("Add PaymentModality");
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled)
+        {
+            
+            paymentmodalities = await PaymentModalityService.GetAllPaymentModalitiesAsync();
+            
+            
+            StateHasChanged();
+        }
+    }
+}
+    
