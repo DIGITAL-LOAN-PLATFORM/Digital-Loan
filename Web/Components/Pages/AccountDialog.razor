@@ -1,0 +1,109 @@
+@using Application.Interfaces
+@using Domain.Entities
+@using Domain.ValueObjects
+@using Application.DTO
+@using Application.Services.Accounts
+@inject IAccountService AccountService
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_success" ValidationDelay="0">
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="Model.Name" Label="Account Name" Required="true" ReadOnly="IsReadOnly" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="Model.Provider" Label="Provider" Required="true" ReadOnly="IsReadOnly" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="Model.Number" Label="Account Number" Required="true" ReadOnly="IsReadOnly" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    @if (IsReadOnly)
+                    {
+                        <MudTextField @bind-Value="_accountTypeDisplay" Label="Account Type" ReadOnly="true" Required="true" />
+                    }
+                    else
+                    {
+                        <MudSelect @bind-Value="_accountTypeValue" Label="Account Type" Required="true">
+                            @foreach (var accountType in Enum.GetValues<AccountType>())
+                            {
+                                <MudSelectItem Value="@((int)accountType)">@accountType.ToString()</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudNumericField @bind-Value="Model.Balance" Label="Balance" Required="true" ReadOnly="IsReadOnly" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        @if (!IsReadOnly)
+        {
+            <MudButton OnClick="@SaveAsync">Save</MudButton>
+        }
+        <MudButton OnClick="@Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public CreateAccountDTO Model { get; set; } = new CreateAccountDTO();
+
+    [Parameter]
+    public int AccountId { get; set; } = 0;
+
+    [Parameter]
+    public bool IsReadOnly { get; set; } = false;
+
+    private MudForm _form = default!;
+    private bool _success;
+    private int _accountTypeValue;
+    private string _accountTypeDisplay = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        if (Model != null)
+        {
+            _accountTypeValue = (int?)Model.Type ?? 0;
+            _accountTypeDisplay = ((AccountType)_accountTypeValue).ToString();
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        await _form.ValidateAsync();
+        if (_form.IsValid)
+        {
+            Model.Type = _accountTypeValue;
+            if (AccountId == 0)
+            {
+                await AccountService.CreateAccountAsync(Model);
+            }
+            else
+            {
+                var updateDto = new UpdateAccountDTO
+                {
+                    Id = AccountId,
+                    Name = Model.Name,
+                    Provider = Model.Provider,
+                    Number = Model.Number,
+                    Type = Model.Type,
+                    Balance = Model.Balance
+                };
+                await AccountService.UpdateAccountAsync(updateDto);
+            }
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+    }
+
+    private void Close()
+    {
+        MudDialog.Cancel();
+    }
+}
