@@ -19,17 +19,18 @@ namespace Domain.Entities
         public string Purpose {get; set; }
         public DateTime DateOfApplication { get; set; }
         public string? Status { get; set;} ="Pending";
-        public DateTime PreferedDate { get; set; }
         public List<Guarantor> Guarantors { get; set; } = new();
         public List<ProvidedDocument> ProvidedDocuments { get; set; } = new();
 
+       
         public string? ApprovedById { get; set; } // The ID of the Staff/Manager
         public DateTime? ApprovalDate { get; set; }
-        public string? ApprovalRemarks { get; set; }
+        public string? ApprovalRemarks { get; set; } // Notes from the manager
 
-       // --- If Rejected ---
-       public string? RejectionReason { get; set; }
-       public DateTime? RejectionDate { get; set; }
+
+        public string? RejectionReason { get; set; }
+        public DateTime? RejectionDate { get; set; }
+       
 
     }
 }

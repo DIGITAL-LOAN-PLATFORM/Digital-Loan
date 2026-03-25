@@ -1,0 +1,110 @@
+@using Application.DTO
+@using Application.Interfaces
+@inject IGuarantorService GuarantorService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-3"/>
+            @(Guarantor.Id == 0 ? "Add New Guarantor" : "Edit Guarantor")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" Label="Full Name" @bind-Value="Guarantor.Name" Required="true" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" Label="NIDA / ID Number" @bind-Value="Guarantor.IdentificationNumber" Required="true" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" Label="Phone Number" @bind-Value="Guarantor.Phone" Required="true" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" Label="Email Address" @bind-Value="Guarantor.Email" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudDivider Class="my-2"/>
+                    <MudText Typo="Typo.subtitle2">Residential Address</MudText>
+                </MudItem>
+                <MudItem xs="6" md="4">
+                    <MudTextField Label="Province" @bind-Value="Guarantor.ResidentialAddress.Province" />
+                </MudItem>
+                <MudItem xs="6" md="4">
+                    <MudTextField Label="District" @bind-Value="Guarantor.ResidentialAddress.District" />
+                </MudItem>
+                <MudItem xs="6" md="4">
+                    <MudTextField Label="Sector" @bind-Value="Guarantor.ResidentialAddress.Sector" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!success)">Save Guarantor</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter] public GuarantorDTO Guarantor { get; set; } = new();
+    [Parameter] public int LoanId { get; set; }
+
+    bool success;
+    MudForm form;
+
+    private async Task Submit()
+    {
+        await form.Validate();
+        if (!form.IsValid) return;
+
+        bool result = false;
+
+        if (Guarantor.Id == 0)
+        {
+            // Map to CreateGuarantorDTO
+            var createDto = new CreateGuarantorDTO
+            {
+                IdentificationNumber = Guarantor.IdentificationNumber,
+                Name = Guarantor.Name,
+                DOB = Guarantor.DOB,
+                Email = Guarantor.Email,
+                Phone = Guarantor.Phone,
+                ResidentialAddress = Guarantor.ResidentialAddress,
+                LoanApplicationId = LoanId,
+                GuarantorTypeId = Guarantor.GuarantorTypeId
+            };
+            result = await GuarantorService.AddGuarantorAsync(createDto);
+        }
+        else
+        {
+            // Map to UpdateGuarantorDTO
+            var updateDto = new UpdateGuarantorDTO
+            {
+                Name = Guarantor.Name,
+                DOB = Guarantor.DOB,
+                Email = Guarantor.Email,
+                Phone = Guarantor.Phone,
+                ResidentialAddress = Guarantor.ResidentialAddress,
+                LoanApplicationId = Guarantor.LoanApplicationId,
+                GuarantorTypeId = Guarantor.GuarantorTypeId
+            };
+            // Note: Pass Id separately as required by your service interface
+            result = await GuarantorService.UpdateGuarantorAsync(Guarantor.Id, updateDto);
+        }
+
+        if (result)
+        {
+            Snackbar.Add("Guarantor saved successfully", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        else
+        {
+            Snackbar.Add("Error saving guarantor. Check for duplicate NIDA or Loan Status.", Severity.Error);
+        }
+    }
+
+    void Cancel() => MudDialog.Cancel();
+}

@@ -1,0 +1,90 @@
+@page "/loans/applications"
+@using Application.DTO
+@using Application.Interfaces
+@inject ILoanApplicationService LoanService
+@inject IDialogService DialogService
+@inject NavigationManager NavManager
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <MudPaper Elevation="25" Class="pa-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+            <div>
+                <MudText Typo="Typo.h5">Loan Applications</MudText>
+                <MudText Typo="Typo.body2">Manage and review all incoming loan requests</MudText>
+            </div>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">
+                New Application
+            </MudButton>
+        </MudStack>
+
+        <MudTable Items="@Applications" Loading="@_loading" Hover="true" FixedHeader="true" Height="60vh">
+            <HeaderContent>
+                <MudTh>App #</MudTh>
+                <MudTh>Borrower</MudTh>
+                <MudTh>Product</MudTh>
+                <MudTh>Amount</MudTh>
+                <MudTh>Date</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh Style="text-align:right">Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="App #">@context.ApplicationNumber</MudTd>
+                <MudTd DataLabel="Borrower">@context.BorrowerName</MudTd>
+                <MudTd DataLabel="Product">@context.ProductName</MudTd>
+                <MudTd DataLabel="Amount">@context.RequestedAmount.ToString("N0")</MudTd>
+                <MudTd DataLabel="Date">@context.DateOfApplication.ToShortDateString()</MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Color="@GetStatusColor(context.Status)" Size="Size.Small">@context.Status</MudChip>
+                </MudTd>
+                <MudTd Style="text-align:right">
+                    <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" 
+                                   OnClick="@(() => ViewDetails(context.Id))" />
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText>No applications found.</MudText>
+            </NoRecordsContent>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private IEnumerable<LoanApplicationDTO> Applications = new List<LoanApplicationDTO>();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        Applications = await LoanService.GetAllApplicationsAsync();
+        _loading = false;
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Pending" => Color.Warning,
+        "Approved" => Color.Success,
+        "Rejected" => Color.Error,
+        _ => Color.Default
+    };
+
+    private void ViewDetails(int id)
+    {
+        // Navigate to a details page where you can manage Guarantors and Documents
+        NavManager.NavigateTo($"/loans/details/{id}");
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        // Assuming you have a way to pick a borrower first or pass a default
+        var parameters = new DialogParameters { ["Model"] = new LoanApplicationDTO { BorrowerId = 1 } };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        
+        var dialog = await DialogService.ShowAsync<LoanApplicationDialog>("Create Loan", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled) await LoadData();
+    }
+}
