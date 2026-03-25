@@ -5,6 +5,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
+using Application.Services.Locations;
+
+using Domain.Entities;
+using Infrastructure.Repository;
+using Application.Interfaces;
+
+
 namespace Infrastructure.DependencyInjection
 {
     public static class ServiceContainer
@@ -22,6 +29,17 @@ namespace Infrastructure.DependencyInjection
             // // Register User Context (for accessing current user anywhere)
             // services.AddHttpContextAccessor();
             // services.AddScoped<IUserContext, UserContext>();
+ 
+                // Register repositories
+                services.AddScoped<IBorrower, BorrowerRepository>();
+                services.AddScoped<IGuarantorType, GuarantorTypeRepository>();
+                services.AddScoped<IPaymentModality, PaymentModalityRepository>();
+                services.AddScoped<ILoanProduct, LoanProductRepository>();
+                services.AddScoped<IGuarantor, GuarantorRepository>();
+                services.AddScoped<ILoanApplication, LoanApplicationRepository>();
+                services.AddScoped<global::Application.Interface.ILocationService, global::Application.Services.Locations.LocationService>();
+                // ILocationService directly registered via app services (in Program.cs)
+               
 
             // Register Repositories 
             services.AddScoped<IRequiredDocument, RequiredDocumentRepository>();
