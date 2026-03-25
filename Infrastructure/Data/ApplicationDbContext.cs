@@ -10,6 +10,7 @@ namespace Infrastructure.Data
         {
         }
 
+<<<<<<< HEAD
         public DbSet<Account> Accounts { get; set; }
         public DbSet<Borrower> Borrowers { get; set; }
         public DbSet<Guarantor> Guarantors { get; set; }
@@ -27,3 +28,22 @@ namespace Infrastructure.Data
         public DbSet<Reason> Reasons { get; set; }
         public DbSet<RecquiredDocument> RecquiredDocuments { get; set; }
     }}
+=======
+        public DbSet<RequiredDocument> RequiredDocuments { get; set; }
+        // public DbSet<Guest> Guests { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+
+            // builder.Entity<Guest>()
+            //     .Property(t => t.GuestStatus)
+            //     .HasConversion<string>();
+
+            builder.Entity<RequiredDocument>()
+                .Property(c => c.DocumentType)
+                .HasConversion<string>();
+        }
+    }
+}
+>>>>>>> 8b26a51bdf784e04111b2993293fca12b6772dcf
