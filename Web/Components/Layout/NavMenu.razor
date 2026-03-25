@@ -1,3 +1,11 @@
+﻿<MudStack Spacing="2" Class="nav-root">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="nav-brand">
+        <MudAvatar Size="Size.Medium" Color="Color.Primary" Variant="Variant.Filled">DLM</MudAvatar>
+        <MudStack Spacing="0" Class="ml-3">
+            <MudText Typo="Typo.subtitle1" Class="nav-brand-title">Digital Loan Management</MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">Operations</MudText>
+        </MudStack>
+    </MudStack>
 ﻿<MudNavMenu>
     <div class="d-flex align-center px-4 py-2 nav-section-title rounded-lg mx-2">
         <MudIcon Icon="@Icons.Material.Filled.Home" Color="Color.Primary" Size="Size.Small" Class="mr-2"/>
@@ -9,16 +17,41 @@
      <MudNavLink Href="/loans/applications" Icon="@Icons.Material.Filled.People">Loan Application</MudNavLink>
       <MudNavLink Href="/loans/guarantors" Icon="@Icons.Material.Filled.People">Guarantor</MudNavLink>
 
-    <MudDivider Class="my-2" />
+    <MudDivider />
 
-    <div class="d-flex align-center px-4 py-2 nav-section-title rounded-lg mx-2">
-        <MudIcon Icon="@Icons.Material.Filled.Build" Color="Color.Secondary" Size="Size.Small" Class="mr-2"/>
-        <MudText Typo="Typo.subtitle2" Style="font-weight: bold;">Settings</MudText>
-    </div>
+    <MudNavMenu Dense="true" Class="nav-menu" Color="Color.Primary">
+        <MudNavLink Href="/" 
+                    Match="NavLinkMatch.All" 
+                    Icon="@Icons.Material.Filled.Dashboard"
+                    Class="nav-link">
+            Dashboard
+        </MudNavLink>
+    </MudNavMenu>
 
-    <MudNavGroup Title="Setting" Icon="@Icons.Material.Filled.Settings">
-        <MudNavLink Href="/guarantortype">Guarantor Type</MudNavLink>
-        <MudNavLink Href="/paymentmodality">Payment Modality</MudNavLink>
-        <MudNavLink Href="/loanproducts">Loan Products</MudNavLink>
-    </MudNavGroup>
-</MudNavMenu>
+    <MudNavMenu Dense="true" Class="nav-menu" Color="Color.Primary">
+        <MudNavLink Href="/requiredocuments" 
+                    Match="NavLinkMatch.All" 
+                    Icon="@Icons.Material.Filled.People"
+                    Class="nav-link">
+            Required Documents
+        </MudNavLink>
+        
+        
+        
+        @* <MudNavLink Href="/campaigns" 
+                    Match="NavLinkMatch.All" 
+                    Icon="@Icons.Material.Filled.Campaign"
+                    Class="nav-link">
+            Campaigns
+        </MudNavLink>
+        
+        <AuthorizeView Roles="Admin">
+            <MudNavLink Href="/users" 
+                        Match="NavLinkMatch.All" 
+                        Icon="@Icons.Material.Filled.Person"
+                        Class="nav-link">
+                Users
+            </MudNavLink>
+        </AuthorizeView> *@
+    </MudNavMenu>
+</MudStack>

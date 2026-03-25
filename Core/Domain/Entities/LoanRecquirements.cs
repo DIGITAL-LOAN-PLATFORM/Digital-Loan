@@ -1,4 +1,5 @@
-namespace Domain.Entities{
+namespace Domain.Entities
+{
 
     public class LoanRecquirements{
 
@@ -9,4 +10,6 @@ namespace Domain.Entities{
         public int LoanProductId { get; set; }
          public DateTime CreatedAt { get; set; }
     }
+
+   
 }
