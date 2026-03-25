@@ -1,7 +1,6 @@
 using Domain.Entities;
-using Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
+
 
 namespace Infrastructure.Data
 {
@@ -18,17 +17,21 @@ namespace Infrastructure.Data
         public DbSet<LoanApplication> LoanApplications { get; set; }
         public DbSet<LoanDisbursement> LoanDisbursements { get; set; }
         public DbSet<LoanProduct> LoanProducts { get; set; }
-        public DbSet<LoanRecquirements> LoanRecquirementses { get; set; }
+        public DbSet<LoanRecquirements> LoanRecquirement { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<PaymentModality> PaymentModalities { get; set; }
+        public DbSet<PaymentType> PaymentTypes{ get; set; }
         public DbSet<Penalty> Penalties { get; set; }
         public DbSet<ProcessFeeDeposit> ProcessFeeDeposits { get; set; }
         public DbSet<ProvidedDocument> ProvidedDocuments { get; set; }
         public DbSet<Reason> Reasons { get; set; }
-        public DbSet<PaymentType> PaymentTypes { get; set; }
-        public DbSet<RequirementDocument> RequiredDocuments { get; set; }
+        public DbSet<RecquiredDocument> RecquiredDocuments { get; set; }
+    }}
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        public DbSet<RequiredDocument> RequiredDocuments { get; set; }
+        // public DbSet<Guest> Guests { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(modelBuilder);
 
@@ -110,6 +113,16 @@ namespace Infrastructure.Data
             }
 
             modelBuilder.Entity<Borrower>().HasQueryFilter(b => b.IsActive);
+            base.OnModelCreating(builder);
+
+            // builder.Entity<Guest>()
+            //     .Property(t => t.GuestStatus)
+            //     .HasConversion<string>();
+
+            builder.Entity<RequiredDocument>()
+                .Property(c => c.DocumentType)
+                .HasConversion<string>();
         }
     }
 }
+

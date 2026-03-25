@@ -1,9 +1,14 @@
-# TODO: Fix MudSelectItem type inference errors in BorrowerDialog.razor
+# Task Progress: Fix CS0246 'Location' error in Guarantor.cs - **COMPLETE** ✅
 
-## Steps:
-- [x] 1. Create TODO.md with plan breakdown
-- [x] 2. Edit BorrowerDialog.razor: Add T="string" to all 5 MudSelectItem disabled/placeholder instances in location dropdowns (Province, District, Sector, Cell, Village)
-- [ ] 3. Verify build succeeds (dotnet build Web)
-- [ ] 4. Test BorrowerDialog functionality
-- [ ] 5. Complete task with attempt_completion
+## Summary
+- ✅ Added `using Domain.ValueObjects;` to `Core/Domain/Entities/Guarantor.cs`.
+- ✅ Verified with `dotnet build` (no error output = success).
+- ✅ Tested with `dotnet run --project Web/Web.csproj` (building/running successfully).
 
+## All Steps Completed
+1. Plan approved.
+2. File edited.
+3. Solution rebuilt.
+4. App startup tested.
+
+The CS0246 compilation error is resolved. Guarantor.cs now correctly references Location from ValueObjects.

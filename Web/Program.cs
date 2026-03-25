@@ -1,8 +1,9 @@
+using System;
+using System.IO;
+using System.Text.Json;
+using Web.Components;
 using MudBlazor.Services;
-using Infrastructure.DependencyInjection;
-
-using Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
+using Application.Services.RequiredDocuments;
 using Domain.Entities;
 using Application.Services;
 using Application.Interface;
@@ -13,22 +14,39 @@ using Application.Services.PaymentTypes;
 using Application.Services.Reasons;
 using Application.Services.Penalties;
 
-using System;
-using System.IO;
-using System.Text.Json;
+
+using Infrastructure.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Infrastructure.Data;
+using Microsoft.AspNetCore.Components;
 using Application.Interfaces;
+using Infrastructure.Repositories;
+using Application.Services.Accounts;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddMudServices();// MudBlazor Services
+builder.Services.AddMudServices();
 
-// Add HttpContext accessor for server-side operations
-builder.Services.AddHttpContextAccessor();
-
-// Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+    builder.Services.AddMudServices();
+
+
+//infrastructure services
+builder.Services.AddInfrastructureService(builder.Configuration);
+
+//application services
+builder.Services.AddScoped<IAccountService, AccountService>();
+
+
+
+
+
+// builder.Services.AddScoped<IGuestService, GuestService>();
+builder.Services.AddScoped<IRequiredDocumentService, RequiredDocumentService>();
     // add controllers for acount endpoints (login/logout)
 
     builder.Services.AddControllers();
@@ -49,47 +67,31 @@ builder.Services.AddRazorComponents()
     
     // ILocationService registered - file loader, no deps
 
-// Dependency Injection for infrastructure Layer
-builder.Services.AddInfrastructureServices(builder.Configuration);
-
-// LOCATION SERVICE TEST DISABLED for clean startup
-Console.WriteLine("=== LOCATION TEST DISABLED - Startup fixed ===");
-Console.WriteLine("Test LocationService via Borrowers page after startup.\\n");
-
-// Add authorization
-builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddControllers();
 
 var app = builder.Build();
 
-// Run migrations on startup
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    dbContext.Database.Migrate();
-}
+// Run seeder
+// using (var scope = app.Services.CreateScope())
+// {
+//     var seeder = scope.ServiceProvider.GetRequiredService<IDataSeeder>();
+//     await seeder.SeedAsync();
+// }
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+
 app.UseHttpsRedirection();
-
-//Add authentication
-
 app.UseAuthentication();
 app.UseAuthorization();
-
-// app.MapIdentityApi<User>();
-
 app.UseAntiforgery();
-app.MapControllers(); // Acount Login/logout end point
-app.UseStaticFiles();  // For wwwroot assets
-app.MapRazorComponents<Web.Components.App>()
+app.MapControllers();
+app.MapStaticAssets();
+app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
-
