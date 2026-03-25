@@ -13,9 +13,10 @@
     <PackageReference Include="MudBlazor" Version="9.2.0" />
   </ItemGroup>
   <ItemGroup>
-<ProjectReference Include="..\Core\Application\Application.csproj" />
-<!-- <ProjectReference Include="..\Core\Domain\Domain.csproj" /> -->
-    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\Core\Application\Application.csproj" />
+    <ProjectReference Include="..\Core\Domain\Domain.csproj" />
+     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+
   </ItemGroup>
 
   <ItemGroup>

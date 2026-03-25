@@ -1,13 +1,20 @@
+using System;
+using System.IO;
+using System.Text.Json;
 using Web.Components;
 using MudBlazor.Services;
-<<<<<<< HEAD
-=======
 using Application.Services.RequiredDocuments;
-using Infrastructure.DependencyInjection; 
-using Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
->>>>>>> 8b26a51bdf784e04111b2993293fca12b6772dcf
 using Domain.Entities;
+using Application.Services;
+using Application.Interface;
+using Application.Services.Locations;
+using Application.Services.Borrowers;
+using Application.Services.Payments;
+using Application.Services.PaymentTypes;
+using Application.Services.Reasons;
+using Application.Services.Penalties;
+
+
 using Infrastructure.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -25,7 +32,6 @@ builder.Services.AddMudServices();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-<<<<<<< HEAD
     builder.Services.AddMudServices();
 
 
@@ -38,11 +44,9 @@ builder.Services.AddScoped<IAccountService, AccountService>();
 
 
 
-=======
-builder.Services.AddInfrastructureService(builder.Configuration); 
+
 // builder.Services.AddScoped<IGuestService, GuestService>();
 builder.Services.AddScoped<IRequiredDocumentService, RequiredDocumentService>();
->>>>>>> 8b26a51bdf784e04111b2993293fca12b6772dcf
     // add controllers for acount endpoints (login/logout)
 
     builder.Services.AddControllers();
@@ -53,6 +57,10 @@ builder.Services.AddScoped<IRequiredDocumentService, RequiredDocumentService>();
     builder.Services.AddScoped<ILoanProductService, LoanProductService>();
     builder.Services.AddScoped<IGuarantorService, GuarantorService>();
     builder.Services.AddScoped<ILoanApplicationService, LoanApplicationService>();
+    builder.Services.AddScoped<IPaymentService, PaymentService>();
+    builder.Services.AddScoped<IPaymentTypeService, PaymentTypeService>();
+    builder.Services.AddScoped<IReasonService, ReasonService>();
+    builder.Services.AddScoped<IPenaltyService, PenaltyService>();
     
     // LocationService registered using factory - resolves namespace issue
     // LocationService now properly registered via ServiceContainer

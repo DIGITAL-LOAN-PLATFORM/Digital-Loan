@@ -32,7 +32,6 @@
 
     <MudDivider />
 
-<<<<<<< HEAD
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav flex-column">
         <div class="nav-item px-3">
@@ -41,6 +40,23 @@
             </NavLink>
         </div>
 
+    <MudNavGroup Title="Setting" Icon="@Icons.Material.Filled.Settings">
+        <MudNavLink Href="/guarantortype">Guarantor Type</MudNavLink>
+        <MudNavLink Href="/paymentmodality">Payment Modality</MudNavLink>
+        <MudNavLink Href="/loanproducts">Loan Products</MudNavLink>
+    </MudNavGroup>
+    <MudNavGroup Title="Payments" Icon="@Icons.Material.Filled.Payment">
+    <MudNavLink Href="/payments" Icon="@Icons.Material.Filled.List">Payments</MudNavLink>
+    <MudNavLink Href="/payment-types" Icon="@Icons.Material.Filled.Category">Payment Types</MudNavLink>
+</MudNavGroup>
+
+     <MudNavGroup Title="Penalties" Icon="@Icons.Material.Filled.Gavel">    
+    <MudNavLink Href="/penalties" Icon="@Icons.Material.Filled.List">Penalties</MudNavLink>
+    <MudNavLink Href="/reasons" Icon="@Icons.Material.Filled.Notes">Reasons</MudNavLink>
+</MudNavGroup>
+
+        
+</MudNavMenu>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="counter">
                 <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
@@ -55,7 +71,6 @@
     </nav>
 </div>
  *@
-=======
     <MudNavMenu Dense="true" Class="nav-menu" Color="Color.Primary">
         <MudNavLink Href="/" 
                     Match="NavLinkMatch.All" 
@@ -92,4 +107,4 @@
         </AuthorizeView> *@
     </MudNavMenu>
 </MudStack>
->>>>>>> 8b26a51bdf784e04111b2993293fca12b6772dcf
+
