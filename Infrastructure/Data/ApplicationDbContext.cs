@@ -11,7 +11,6 @@ namespace Infrastructure.Data
         {
         }
 
-        // --- DbSets ---
         public DbSet<Account> Accounts { get; set; }
         public DbSet<Borrower> Borrowers { get; set; }
         public DbSet<Guarantor> Guarantors { get; set; }
@@ -33,9 +32,6 @@ namespace Infrastructure.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // 1. CONFIGURE OWNED TYPES (Value Objects)
-            // This maps the Location properties directly into the Parent table columns
-            
             modelBuilder.Entity<Borrower>().OwnsOne(b => b.HomeLocation, location =>
             {
                 location.Property(l => l.Province).HasColumnName("Province");
@@ -54,35 +50,65 @@ namespace Infrastructure.Data
                 location.Property(l => l.Village).HasColumnName("Res_Village");
             });
 
-            // 2. RELATIONSHIPS & CONSTRAINTS
-            
-            // Link Guarantor to LoanApplication
             modelBuilder.Entity<Guarantor>()
                 .HasOne(g => g.LoanApplication)
                 .WithMany(l => l.Guarantors)
                 .HasForeignKey(g => g.LoanApplicationId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Link Guarantor to GuarantorType
             modelBuilder.Entity<Guarantor>()
                 .HasOne(g => g.GuarantorType)
                 .WithMany()
                 .HasForeignKey(g => g.GuarantorTypeId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Unique Index for Borrower NIDA
+            modelBuilder.Entity<Payment>()
+                .HasOne(p => p.PaymentType)
+                .WithMany()
+                .HasForeignKey(p => p.PaymentTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Payment>()
+                .HasOne(p => p.Account)
+                .WithMany()
+                .HasForeignKey(p => p.AccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Payment>()
+                .HasOne(p => p.LoanDisbursement)
+                .WithMany()
+                .HasForeignKey(p => p.LoanDisbursementId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Penalty>()
+                .HasOne(p => p.LoanDisbursement)
+                .WithMany()
+                .HasForeignKey(p => p.LoanDisbursementId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Penalty>()
+                .HasOne(p => p.PenaltyReason)
+                .WithMany()
+                .HasForeignKey(p => p.ReasonId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PaymentType>()
+                .HasIndex(pt => pt.Name)
+                .IsUnique();
+
+            modelBuilder.Entity<Reason>()
+                .HasIndex(r => r.Name)
+                .IsUnique();
+
             modelBuilder.Entity<Borrower>()
                 .HasIndex(b => b.IdentificationNumber)
                 .IsUnique();
 
-            // 3. THE GLOBAL FIX: Disable Cascade Delete
-            // Important: This must come AFTER specific relationship configs to avoid overriding them wrongly
             foreach (var relationship in modelBuilder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))
             {
                 relationship.DeleteBehavior = DeleteBehavior.Restrict;
             }
 
-            // 4. SOFT-DELETE FILTER (If IsActive property exists on Borrower)
             modelBuilder.Entity<Borrower>().HasQueryFilter(b => b.IsActive);
         }
     }

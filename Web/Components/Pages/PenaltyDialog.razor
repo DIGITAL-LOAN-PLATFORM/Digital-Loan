@@ -1,0 +1,93 @@
+@using Application.DTO
+@using Application.Interface
+@using Domain.Entities
+@using MudBlazor
+
+@inject ISnackbar Snackbar
+@inject IPenaltyService PenaltyService
+@inject IReasonService ReasonService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@(PenaltyId == 0 ? Icons.Material.Filled.Add : Icons.Material.Filled.Edit)" Class="mr-2 mb-1"/>
+            @(PenaltyId == 0 ? "Add Penalty" : "Update Penalty")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int" Label="Loan Disbursement ID" Required="true" @bind-Value="_model.LoanDisbursementId" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" Label="Penalty Amount" Required="true" @bind-Value="_model.PenaltyAmount" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int" Label="Reason" Required="true" @bind-Value="_model.ReasonId">
+                        @foreach (var r in _reasons)
+                        {
+                            <MudSelectItem T="int" Value="@r.Id">@r.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Confirmed By (User ID)" @bind-Value="_model.ConfirmedByUserId" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Disabled="@_processing">
+            @(_processing ? "Processing..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public int PenaltyId { get; set; } = 0;
+
+    private MudForm? form;
+    private bool _processing = false;
+    private CreatePenaltyDTO _model = new();
+    private List<Reason> _reasons = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _reasons = await ReasonService.GetAllReasonsAsync();
+    }
+
+    private async Task Submit()
+    {
+        if (form == null) return;
+        await form.ValidateAsync();
+        if (!form.IsValid) return;
+
+        _processing = true;
+        try
+        {
+            if (PenaltyId == 0)
+            {
+                await PenaltyService.CreatePenaltyAsync(_model);
+                Snackbar.Add("Penalty created successfully", Severity.Success);
+            }
+            else
+            {
+                await PenaltyService.UpdatePenaltyAsync(PenaltyId, new UpdatePenaltyDTO
+                {
+                    PenaltyAmount = _model.PenaltyAmount,
+                    ReasonId = _model.ReasonId,
+                    ConfirmedByUserId = _model.ConfirmedByUserId
+                });
+                Snackbar.Add("Penalty updated successfully", Severity.Success);
+            }
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        finally { _processing = false; }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

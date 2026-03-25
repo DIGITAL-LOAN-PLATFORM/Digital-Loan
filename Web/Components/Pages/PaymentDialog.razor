@@ -1,0 +1,104 @@
+@using Application.DTO
+@using Application.Interface
+@using Domain.Entities
+@using MudBlazor
+
+@inject ISnackbar Snackbar
+@inject IPaymentService PaymentService
+@inject IPaymentTypeService PaymentTypeService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@(PaymentId == 0 ? Icons.Material.Filled.Add : Icons.Material.Filled.Edit)" Class="mr-2 mb-1"/>
+            @(PaymentId == 0 ? "Record Payment" : "Update Payment")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int" Label="Loan Disbursement ID" Required="true" @bind-Value="_model.LoanDisbursementId" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" Label="Total Amount Paid" Required="true" @bind-Value="_model.TotalAmountPaid" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" Label="Penalty Allocated" @bind-Value="_model.PenaltyAllocated" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int" Label="Payment Type" Required="true" @bind-Value="_model.PaymentTypeId">
+                        @foreach (var pt in _paymentTypes)
+                        {
+                            <MudSelectItem T="int" Value="@pt.Id">@pt.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Account" Required="true" @bind-Value="_model.Account" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Payment Date" Required="true" @bind-Date="_paymentDate" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Disabled="@_processing">
+            @(_processing ? "Processing..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public int PaymentId { get; set; } = 0;
+
+    private MudForm? form;
+    private bool _processing = false;
+    private CreatePaymentDTO _model = new();
+    private DateTime? _paymentDate = DateTime.Today;
+    private List<PaymentType> _paymentTypes = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _paymentTypes = await PaymentTypeService.GetAllPaymentTypesAsync();
+    }
+
+    private async Task Submit()
+    {
+        if (form == null) return;
+        await form.ValidateAsync();
+        if (!form.IsValid) return;
+
+        _processing = true;
+        try
+        {
+            _model.PaymentDate = _paymentDate ?? DateTime.Today;
+
+            if (PaymentId == 0)
+            {
+                await PaymentService.CreatePaymentAsync(_model);
+                Snackbar.Add("Payment recorded successfully", Severity.Success);
+            }
+            else
+            {
+                await PaymentService.UpdatePaymentAsync(PaymentId, new UpdatePaymentDTO
+                {
+                    TotalAmountPaid = _model.TotalAmountPaid,
+                    PenaltyAllocated = _model.PenaltyAllocated,
+                    PaymentTypeId = _model.PaymentTypeId,
+                    Account = _model.Account,
+                    PaymentDate = _model.PaymentDate
+                });
+                Snackbar.Add("Payment updated successfully", Severity.Success);
+            }
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        finally { _processing = false; }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -22,7 +22,7 @@ namespace Infrastructure.DependencyInjection
         {
             // add infrastructure services here, e.g., DbContext
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(configuration.GetConnectionString("DigitalLoanPlatformConnection")));
                 // Register the UserContext as a scoped service
                 
 
@@ -36,7 +36,10 @@ namespace Infrastructure.DependencyInjection
                 services.AddScoped<ILoanApplication, LoanApplicationRepository>();
                 services.AddScoped<global::Application.Interface.ILocationService, global::Application.Services.Locations.LocationService>();
                 // ILocationService directly registered via app services (in Program.cs)
-               
+                services.AddScoped<IPayment, PaymentRepository>();
+                services.AddScoped<IPaymentType, PaymentTypeRepository>();
+                services.AddScoped<IReason, ReasonRepository>();
+                services.AddScoped<IPenalty, PenaltyRepository>();
 
                 
                

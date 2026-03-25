@@ -1,0 +1,76 @@
+@page "/reasons"
+@using Application.Interface
+@using Domain.Entities
+@using MudBlazor
+@inject IReasonService ReasonService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Reasons</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">Penalty Reasons</MudText>
+
+<MudTable Items="@_reasons" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Elevation="2">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Reasons</MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add">
+            Add Reason
+        </MudButton>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>ID</MudTh>
+        <MudTh>Name</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="ID">@context.Id</MudTd>
+        <MudTd DataLabel="Name">@context.Name</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" OnClick="@(() => OpenUpdateDialog(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeleteReason(context.Id))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<Reason> _reasons = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadReasons();
+
+    private async Task LoadReasons()
+    {
+        _loading = true;
+        try { _reasons = await ReasonService.GetAllReasonsAsync(); }
+        finally { _loading = false; }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var parameters = new DialogParameters { ["ReasonId"] = 0 };
+        var dialog = await DialogService.ShowAsync<ReasonDialog>("Add Reason", parameters, options);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadReasons();
+    }
+
+    private async Task OpenUpdateDialog(Reason reason)
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var parameters = new DialogParameters { ["ReasonId"] = reason.Id };
+        var dialog = await DialogService.ShowAsync<ReasonDialog>("Update Reason", parameters, options);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadReasons();
+    }
+
+    private async Task DeleteReason(int id)
+    {
+        try
+        {
+            await ReasonService.DeleteReasonAsync(id);
+            Snackbar.Add("Reason deleted", Severity.Success);
+            await LoadReasons();
+        }
+        catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    }
+}

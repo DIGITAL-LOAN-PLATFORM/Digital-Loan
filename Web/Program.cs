@@ -8,6 +8,11 @@ using Application.Services;
 using Application.Interface;
 using Application.Services.Locations;
 using Application.Services.Borrowers;
+using Application.Services.Payments;
+using Application.Services.PaymentTypes;
+using Application.Services.Reasons;
+using Application.Services.Penalties;
+
 using System;
 using System.IO;
 using System.Text.Json;
@@ -34,6 +39,10 @@ builder.Services.AddRazorComponents()
     builder.Services.AddScoped<ILoanProductService, LoanProductService>();
     builder.Services.AddScoped<IGuarantorService, GuarantorService>();
     builder.Services.AddScoped<ILoanApplicationService, LoanApplicationService>();
+    builder.Services.AddScoped<IPaymentService, PaymentService>();
+    builder.Services.AddScoped<IPaymentTypeService, PaymentTypeService>();
+    builder.Services.AddScoped<IReasonService, ReasonService>();
+    builder.Services.AddScoped<IPenaltyService, PenaltyService>();
     
     // LocationService registered using factory - resolves namespace issue
     // LocationService now properly registered via ServiceContainer
