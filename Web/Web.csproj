@@ -12,9 +12,9 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.0" />
     <PackageReference Include="MudBlazor" Version="9.2.0" />
   </ItemGroup>
-
   <ItemGroup>
-    <ProjectReference Include="..\Core\Application\Application.csproj" />
+<ProjectReference Include="..\Core\Application\Application.csproj" />
+<!-- <ProjectReference Include="..\Core\Domain\Domain.csproj" /> -->
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
 

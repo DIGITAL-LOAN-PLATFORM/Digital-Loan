@@ -1,9 +1,10 @@
-using Domain.Entities;
 using Application.DTO;
+using Domain.Entities;
+using Application.Interfaces;
 
-namespace Application.Interfaces
+namespace Application.Services.Accounts
 {
-    public interface IAccount
+    public interface IAccountService
     {
         Task<List<Account>> GetAllAsync();
         Task<Account> GetByIdAsync(int id);

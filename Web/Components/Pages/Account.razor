@@ -1,0 +1,158 @@
+@page "/account"
+@using Application.DTO
+@using Application.Services.Accounts
+@using MudBlazor
+@using Domain.Entities
+@using Application.Interfaces
+@inject IAccountService AccountService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <MudText Typo="Typo.h4" Class="mb-4">Accounts</MudText>
+
+    <MudPaper Class="pa-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudText Typo="Typo.h6">Accounts List</MudText>
+            <MudButton OnClick="AddAccountAsync" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">
+                Add
+            </MudButton>
+        </MudStack>
+        <MudTable Items="_accounts" Dense="true" Hover="true" Outlined="true">
+            <HeaderContent>
+                <MudTh>ID</MudTh>
+                <MudTh>NAME</MudTh>
+                <MudTh>PROVIDER</MudTh>
+                <MudTh>NUMBER</MudTh>
+                <MudTh>TYPE</MudTh>
+                <MudTh>BALANCE</MudTh>
+                <MudTh>ACTIONS</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Id</MudTd>
+                <MudTd>@context.Name</MudTd>
+                <MudTd>@context.Provider</MudTd>
+                <MudTd>@context.Number</MudTd>
+                <MudTd>@GetTypeName(context.Type)</MudTd>
+                <MudTd>@(context.Balance?.ToString("C") ?? "N/A")</MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" OnClick="@((e) => ViewAccountAsync(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="@((e) => EditAccountAsync(context))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<Domain.Entities.Account> _accounts = new();
+
+    private string GetTypeName(int? type) => type switch 
+    {
+        0 => "Savings",
+        1 => "Checking",
+        2 => "Credit",
+        3 => "Investment",
+        _ => type?.ToString() ?? "N/A"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _accounts = await AccountService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load accounts: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task AddAccountAsync()
+    {
+        var parameters = new DialogParameters
+        {
+            ["Model"] = new CreateAccountDTO(),
+            ["IsReadOnly"] = false
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<AccountDialog>("Add Account", parameters, options);
+        var result = await dialog.Result;
+
+        if (result.Canceled) 
+        {
+            Snackbar.Add("Add canceled", Severity.Warning);
+            return;
+        }
+
+        bool success = result.Data as bool? ?? false;
+        if (success)
+        {
+            Snackbar.Add("Account added successfully!", Severity.Success);
+            _accounts = await AccountService.GetAllAsync();
+        }
+        else
+        {
+            Snackbar.Add("Add account failed", Severity.Error);
+        }
+    }
+
+    private async Task ViewAccountAsync(Domain.Entities.Account account)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Model"] = new CreateAccountDTO
+            {
+                Name = account.Name ?? string.Empty,
+                Provider = account.Provider ?? string.Empty,
+                Number = account.Number ?? string.Empty,
+                Type = account.Type ?? 0,
+                Balance = account.Balance ?? 0
+            },
+            ["IsReadOnly"] = true
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<AccountDialog>("View Account", parameters, options);
+        await dialog.Result;
+    }
+
+    private async Task EditAccountAsync(Domain.Entities.Account account)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Model"] = new CreateAccountDTO
+            {
+                Name = account.Name ?? string.Empty,
+                Provider = account.Provider ?? string.Empty,
+                Number = account.Number ?? string.Empty,
+                Type = account.Type ?? 0,
+                Balance = account.Balance ?? 0
+            },
+            ["AccountId"] = account.Id,
+            ["IsReadOnly"] = false
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<AccountDialog>("Edit Account", parameters, options);
+        var result = await dialog.Result;
+
+        if (result.Canceled) 
+        {
+            Snackbar.Add("Edit canceled", Severity.Warning);
+            return;
+        }
+
+        bool success = result.Data as bool? ?? false;
+        if (success)
+        {
+            Snackbar.Add("Account updated successfully!", Severity.Success);
+            _accounts = await AccountService.GetAllAsync();
+        }
+        else
+        {
+            Snackbar.Add("Update account failed", Severity.Error);
+        }
+    }
+}

@@ -1,18 +1,22 @@
 using Web.Components;
 using MudBlazor.Services;
+<<<<<<< HEAD
+=======
 using Application.Services.RequiredDocuments;
 using Infrastructure.DependencyInjection; 
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+>>>>>>> 8b26a51bdf784e04111b2993293fca12b6772dcf
 using Domain.Entities;
-using Application.Services;
-using Application.Interface;
-using Application.Services.Locations;
-using Application.Services.Borrowers;
-using System;
-using System.IO;
-using System.Text.Json;
+using Infrastructure.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Infrastructure.Data;
+using Microsoft.AspNetCore.Components;
 using Application.Interfaces;
+using Infrastructure.Repositories;
+using Application.Services.Accounts;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,9 +25,24 @@ builder.Services.AddMudServices();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+<<<<<<< HEAD
+    builder.Services.AddMudServices();
+
+
+//infrastructure services
+builder.Services.AddInfrastructureService(builder.Configuration);
+
+//application services
+builder.Services.AddScoped<IAccountService, AccountService>();
+
+
+
+
+=======
 builder.Services.AddInfrastructureService(builder.Configuration); 
 // builder.Services.AddScoped<IGuestService, GuestService>();
 builder.Services.AddScoped<IRequiredDocumentService, RequiredDocumentService>();
+>>>>>>> 8b26a51bdf784e04111b2993293fca12b6772dcf
     // add controllers for acount endpoints (login/logout)
 
     builder.Services.AddControllers();
