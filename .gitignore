@@ -2,6 +2,6 @@ obj/
 bin/
 .vs/
 Bebug
-appsettings.Development.json
+TODO.md
 .local
 Migrations/

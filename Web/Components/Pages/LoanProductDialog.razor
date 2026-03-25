@@ -1,0 +1,78 @@
+@using Application.DTO
+@using Application.Interface
+@using MudBlazor
+
+@inject ISnackbar Snackbar
+@inject ILoanProductService LoanProductService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@(IsEditMode ? Icons.Material.Filled.Edit : Icons.Material.Filled.Add)" Class="mr-2 mb-1"/>
+            @(IsEditMode ? "Update Loan Product" : "New Loan Product")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form">
+            <MudGrid>
+                <MudItem xs="12" sm="8">
+                    <MudTextField T="string" Label="Product Name" Required="true" 
+                                  @bind-Value="Model.ProductName" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="decimal?" Label="Interest Rate (%)" Format="N2" 
+                                     @bind-Value="Model.InterestRate" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Description" Lines="3"
+                                  @bind-Value="Model.Description" Variant="Variant.Outlined" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Disabled="@_processing">
+            @(_processing ? "Processing..." : "Save Product")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public int? ProductId { get; set; }
+    [Parameter] public LoanProductDTO Model { get; set; } = new();
+
+    private MudForm? form;
+    private bool _processing = false;
+    private bool IsEditMode => ProductId.HasValue && ProductId > 0;
+
+    private async Task Submit()
+    {
+        await form!.ValidateAsync();
+        if (!form.IsValid) return;
+
+        _processing = true;
+        try
+        {
+            bool success;
+            if (IsEditMode)
+                success = await LoanProductService.UpdateProductAsync(ProductId!.Value, Model);
+            else
+                success = await LoanProductService.CreateProductAsync(Model);
+
+            if (success)
+            {
+                Snackbar.Add("Product saved successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("Error: Product name might already exist.", Severity.Warning);
+            }
+        }
+        finally { _processing = false; }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

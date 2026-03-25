@@ -21,7 +21,7 @@ namespace Infrastructure.Data
         public DbSet<Payment> Payments { get; set; }
         public DbSet<PaymentModality> PaymentModalities { get; set; }
         public DbSet<PaymentType> PaymentTypes{ get; set; }
-        public DbSet<Penalties> Penalties { get; set; }
+        public DbSet<Penalty> Penalties { get; set; }
         public DbSet<ProcessFeeDeposit> ProcessFeeDeposits { get; set; }
         public DbSet<ProvidedDocument> ProvidedDocuments { get; set; }
         public DbSet<Reason> Reasons { get; set; }

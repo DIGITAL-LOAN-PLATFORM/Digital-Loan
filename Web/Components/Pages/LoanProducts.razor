@@ -1,0 +1,106 @@
+@page "/loanproducts"
+@using Application.Interface
+@using Domain.Entities
+@using Application.DTO
+@using MudBlazor
+
+@inject ILoanProductService LoanProductService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Loan Products</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Loan Products </MudText>
+
+<MudTable Items="@_products" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Elevation="2" Striped="true">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Available Products</MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   OnClick="(() => OpenDialog())" 
+                   StartIcon="@Icons.Material.Filled.Add">
+            Add New Product
+        </MudButton>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Product Name</MudTh>
+        <MudTh>Interest Rate</MudTh>
+        <MudTh>Description</MudTh>
+        <MudTh Style="text-align:right">Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Product Name"><b>@context.ProductName</b></MudTd>
+        <MudTd DataLabel="Interest Rate">@context.InterestRate%</MudTd>
+        <MudTd DataLabel="Description">@context.Description</MudTd>
+        <MudTd DataLabel="Actions" Style="text-align:right">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                           Color="Color.Info" 
+                           OnClick="@(() => OpenDialog(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                           Color="Color.Error" 
+                           OnClick="@(() => DeleteProduct(context.Id))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<LoanProduct> _products = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadProducts();
+
+    private async Task LoadProducts()
+    {
+        _loading = true;
+        try
+        {
+            _products = await LoanProductService.GetAllLoanProductsAsync();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenDialog(LoanProduct? entity = null)
+    {
+        var parameters = new DialogParameters();
+        string title = "Add New Loan Product";
+
+        if (entity != null)
+        {
+            title = "Update Loan Product";
+            parameters.Add("ProductId", entity.Id);
+            parameters.Add("Model", new LoanProductDTO 
+            { 
+                ProductName = entity.ProductName, 
+                InterestRate = entity.InterestRate, 
+                Description = entity.Description 
+            });
+        }
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<LoanProductDialog>(title, parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled) await LoadProducts();
+    }
+
+    private async Task DeleteProduct(int id)
+    {
+        @* // Explicitly calling the MessageBox extension
+        bool? result = await DialogService.ShowMessageBox(
+            "Delete Confirmation", 
+            "Are you sure you want to delete this loan product? This cannot be undone.", 
+            yesText: "Delete", 
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            await LoanProductService.DeleteProductAsync(id);
+            Snackbar.Add("Product removed successfully", Severity.Success);
+            await LoadProducts();
+        } *@
+    }
+}
