@@ -1,31 +1,41 @@
 using Web.Components;
 using MudBlazor.Services;
 using Application.Services.RequiredDocuments;
-using Infrastructure.DependencyInjection; 
-using Infrastructure.Data;
+using Application.Services.ProvidedDocuments;
+using Application.Services.DocumentTypes;
+using Application.Services.Borrowers;      
+using Application.Services;               
+using Infrastructure.DependencyInjection;
+using Application.Interface;
+using Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddMudServices();
-
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddInfrastructureService(builder.Configuration); 
-// builder.Services.AddScoped<IGuestService, GuestService>();
+// Registers DbContext + all repositories
+builder.Services.AddInfrastructureService(builder.Configuration);
+
+// Location Service
+builder.Services.AddSingleton<ILocationService>(sp =>
+{
+    var env    = sp.GetRequiredService<IWebHostEnvironment>();
+    var logger = sp.GetRequiredService<ILogger<JsonLocationService>>();
+    return new JsonLocationService(env.WebRootFileProvider, logger);
+});
+
+// Application Services
 builder.Services.AddScoped<IRequiredDocumentService, RequiredDocumentService>();
+builder.Services.AddScoped<IDocumentTypeService,     DocumentTypeService>();
+builder.Services.AddScoped<IBorrowerService,         BorrowerService>();
+builder.Services.AddScoped<IProvidedDocumentService, ProvidedDocumentService>();
 
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddControllers();
 
 var app = builder.Build();
-
-// Run seeder
-// using (var scope = app.Services.CreateScope())
-// {
-//     var seeder = scope.ServiceProvider.GetRequiredService<IDataSeeder>();
-//     await seeder.SeedAsync();
-// }
 
 if (!app.Environment.IsDevelopment())
 {

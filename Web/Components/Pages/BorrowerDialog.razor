@@ -1,6 +1,5 @@
 @using Application.DTO
 @using Application.Interface
-@using Application.Services
 @using Domain.Entities
 @using Domain.ValueObjects
 @using MudBlazor
@@ -20,8 +19,8 @@
         <MudForm @ref="form">
             <MudGrid>
                 <MudItem xs="12" sm="6">
-                    <MudTextField T="string" Label="National ID (NIDA)" Required="true" 
-                                  @bind-Value="borrowerModel.IdentificationNumber" 
+                    <MudTextField T="string" Label="National ID (NIDA)" Required="true"
+                                  @bind-Value="borrowerModel.IdentificationNumber"
                                   ReadOnly="@(borrowerModel.Id != 0)" />
                 </MudItem>
                 <MudItem xs="12" sm="3">
@@ -33,15 +32,13 @@
                         <MudSelectItem T="string" Value="@("Female")" />
                     </MudSelect>
                 </MudItem>
-
                 <MudItem xs="12" sm="6">
                     <MudTextField T="string" Label="First Name" @bind-Value="borrowerModel.FirstName" Required="true" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudTextField T="string" Label="Last Name" @bind-Value="borrowerModel.LastName" Required="true" />
                 </MudItem>
-
-                <MudItem xs="12" sm="12">
+                <MudItem xs="12">
                     <MudSelect T="string" Label="Marital Status" @bind-Value="borrowerModel.MaritalStatus" Required="true">
                         <MudSelectItem T="string" Value="@("Single")" />
                         <MudSelectItem T="string" Value="@("Married")" />
@@ -62,83 +59,53 @@
 
                 <MudItem xs="12"><MudDivider Class="my-2"/></MudItem>
 
-                @* Cascading Location Selects *@
-                <MudItem xs="12" sm="4">
-                    <MudSelect T="string" Label="Province" Value="borrowerModel.HomeLocation?.Province" ValueChanged="OnProvinceChanged" Required="true" Disabled="@_isLoading">
-                        @if (_isLoading)
+                @* Cascading Location Selects — bound directly to flat string fields *@
+                <MudItem xs="12" md="4">
+                    <MudSelect T="string" Value="borrowerModel.Province" Label="Province"
+                               ValueChanged="OnProvinceChanged" ReadOnly="IsReadOnly" Required="true">
+                        @foreach (var p in _provinces)
                         {
-                            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
-                        }
-                        else
-                        {
-                            @foreach (var p in _provinces)
-                            {
-                                <MudSelectItem T="string" Value="@p">@p</MudSelectItem>
-                            }
+                            <MudSelectItem Value="@p">@p</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
-
-                <MudItem xs="12" sm="4">
-                    <MudSelect T="string" Label="District" Value="borrowerModel.HomeLocation?.District" ValueChanged="OnDistrictChanged" Disabled="@(!_districts.Any() || _districtsLoading)" Required="true">
-                        @if (_districtsLoading)
+                <MudItem xs="12" md="4">
+                    <MudSelect T="string" Value="borrowerModel.District" Label="District"
+                               ValueChanged="OnDistrictChanged" ReadOnly="IsReadOnly" Required="true"
+                               Disabled="@(string.IsNullOrEmpty(borrowerModel.Province))">
+                        @foreach (var d in _districts)
                         {
-                            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
-                        }
-                        else
-                        {
-                            @foreach (var d in _districts)
-                            {
-                                <MudSelectItem T="string" Value="@d">@d</MudSelectItem>
-                            }
+                            <MudSelectItem Value="@d">@d</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
-
-                <MudItem xs="12" sm="4">
-                    <MudSelect T="string" Label="Sector" Value="borrowerModel.HomeLocation?.Sector" ValueChanged="OnSectorChanged" Disabled="@(!_sectors.Any() || _sectorsLoading)" Required="true">
-                        @if (_sectorsLoading)
+                <MudItem xs="12" md="4">
+                    <MudSelect T="string" Value="borrowerModel.Sector" Label="Sector"
+                               ValueChanged="OnSectorChanged" ReadOnly="IsReadOnly" Required="true"
+                               Disabled="@(string.IsNullOrEmpty(borrowerModel.District))">
+                        @foreach (var s in _sectors)
                         {
-                            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
-                        }
-                        else
-                        {
-                            @foreach (var s in _sectors)
-                            {
-                                <MudSelectItem T="string" Value="@s">@s</MudSelectItem>
-                            }
+                            <MudSelectItem Value="@s">@s</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
-
-                <MudItem xs="12" sm="6">
-                    <MudSelect T="string" Label="Cell" Value="borrowerModel.HomeLocation?.Cell" ValueChanged="OnCellChanged" Disabled="@(!_cells.Any() || _cellsLoading)" Required="true">
-                        @if (_cellsLoading)
+                <MudItem xs="12" md="6">
+                    <MudSelect T="string" Value="borrowerModel.Cell" Label="Cell"
+                               ValueChanged="OnCellChanged" ReadOnly="IsReadOnly" Required="true"
+                               Disabled="@(string.IsNullOrEmpty(borrowerModel.Sector))">
+                        @foreach (var c in _cells)
                         {
-                            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
-                        }
-                        else
-                        {
-                            @foreach (var c in _cells)
-                            {
-                                <MudSelectItem T="string" Value="@c">@c</MudSelectItem>
-                            }
+                            <MudSelectItem Value="@c">@c</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
-
-                <MudItem xs="12" sm="6">
-                    <MudSelect T="string" Label="Village" Value="borrowerModel.HomeLocation?.Village" ValueChanged="OnVillageChanged" Disabled="@(!_villages.Any() || _villagesLoading)" Required="true">
-                        @if (_villagesLoading)
+                <MudItem xs="12" md="6">
+                    <MudSelect T="string" Label="Village" @bind-Value="borrowerModel.Village"
+                               ReadOnly="IsReadOnly" Required="true"
+                               Disabled="@(string.IsNullOrEmpty(borrowerModel.Cell))">
+                        @foreach (var v in _villages)
                         {
-                            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
-                        }
-                        else
-                        {
-                            @foreach (var v in _villages)
-                            {
-                                <MudSelectItem T="string" Value="@v">@v</MudSelectItem>
-                            }
+                            <MudSelectItem Value="@v">@v</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
@@ -156,105 +123,76 @@
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
     [Parameter] public int BorrowerId { get; set; } = 0;
+    [Parameter] public bool IsReadOnly { get; set; } = false;
 
     private MudForm? form;
     private bool _processing = false;
-    private bool _isLoading = true;
-    
-    // Missing Loading Variables Added Below
-    private bool _districtsLoading = false;
-    private bool _sectorsLoading = false;
-    private bool _cellsLoading = false;
-    private bool _villagesLoading = false;
-    
+
     private Borrower borrowerModel = new();
-    
+
     private List<string> _provinces = new();
     private List<string> _districts = new();
-    private List<string> _sectors = new();
-    private List<string> _cells = new();
-    private List<string> _villages = new();
+    private List<string> _sectors   = new();
+    private List<string> _cells     = new();
+    private List<string> _villages  = new();
 
     protected override async Task OnInitializedAsync()
     {
-        borrowerModel.HomeLocation ??= new Location();
-        try {
-            _provinces = await LocationService.GetProvincesAsync();
-        } finally {
-            _isLoading = false;
-        }
+        _provinces = await LocationService.GetProvincesAsync();
     }
 
     private async Task OnProvinceChanged(string val)
     {
-        borrowerModel.HomeLocation.Province = val;
-        borrowerModel.HomeLocation.District = "";
-        _districts.Clear();
-        ResetDownstream(1);
+        borrowerModel.Province = val;
+        borrowerModel.District = null;
+        borrowerModel.Sector   = null;
+        borrowerModel.Cell     = null;
+        borrowerModel.Village  = null;
+        _districts.Clear(); _sectors.Clear(); _cells.Clear(); _villages.Clear();
 
         if (!string.IsNullOrEmpty(val))
-        {
-            _districtsLoading = true;
             _districts = await LocationService.GetDistrictsAsync(val);
-            _districtsLoading = false;
-        }
+
         StateHasChanged();
     }
 
     private async Task OnDistrictChanged(string val)
     {
-        borrowerModel.HomeLocation.District = val;
-        borrowerModel.HomeLocation.Sector = "";
-        _sectors.Clear();
-        ResetDownstream(2);
+        borrowerModel.District = val;
+        borrowerModel.Sector   = null;
+        borrowerModel.Cell     = null;
+        borrowerModel.Village  = null;
+        _sectors.Clear(); _cells.Clear(); _villages.Clear();
 
         if (!string.IsNullOrEmpty(val))
-        {
-            _sectorsLoading = true;
             _sectors = await LocationService.GetSectorsAsync(val);
-            _sectorsLoading = false;
-        }
+
         StateHasChanged();
     }
 
     private async Task OnSectorChanged(string val)
     {
-        borrowerModel.HomeLocation.Sector = val;
-        borrowerModel.HomeLocation.Cell = "";
-        _cells.Clear();
-        ResetDownstream(3);
+        borrowerModel.Sector  = val;
+        borrowerModel.Cell    = null;
+        borrowerModel.Village = null;
+        _cells.Clear(); _villages.Clear();
 
         if (!string.IsNullOrEmpty(val))
-        {
-            _cellsLoading = true;
             _cells = await LocationService.GetCellsAsync(val);
-            _cellsLoading = false;
-        }
+
         StateHasChanged();
     }
 
     private async Task OnCellChanged(string val)
     {
-        borrowerModel.HomeLocation.Cell = val;
-        borrowerModel.HomeLocation.Village = "";
+        borrowerModel.Cell    = val;
+        borrowerModel.Village = null;
         _villages.Clear();
 
         if (!string.IsNullOrEmpty(val))
-        {
-            _villagesLoading = true;
             _villages = await LocationService.GetVillagesAsync(val);
-            _villagesLoading = false;
-        }
+
         StateHasChanged();
-    }
-
-    private void OnVillageChanged(string val) => borrowerModel.HomeLocation.Village = val;
-
-    private void ResetDownstream(int level)
-    {
-        if (level <= 1) { borrowerModel.HomeLocation.Sector = ""; _sectors.Clear(); }
-        if (level <= 2) { borrowerModel.HomeLocation.Cell = ""; _cells.Clear(); }
-        if (level <= 3) { borrowerModel.HomeLocation.Village = ""; _villages.Clear(); }
     }
 
     private async Task Submit()
@@ -266,28 +204,23 @@
         _processing = true;
         try
         {
-            var loc = new LocationDTO 
-            { 
-                Province = borrowerModel.HomeLocation?.Province, 
-                District = borrowerModel.HomeLocation?.District,
-                Sector = borrowerModel.HomeLocation?.Sector, 
-                Cell = borrowerModel.HomeLocation?.Cell, 
-                Village = borrowerModel.HomeLocation?.Village 
-            };
-
             if (borrowerModel.Id == 0)
             {
                 await BorrowerService.CreateBorrowerAsync(new CreateBorrowerDTO
                 {
                     IdentificationNumber = borrowerModel.IdentificationNumber,
-                    FirstName = borrowerModel.FirstName,
-                    LastName = borrowerModel.LastName,
-                    Gender = borrowerModel.Gender,
-                    DOB = borrowerModel.DOB,
-                    MaritalStatus = borrowerModel.MaritalStatus,
-                    SpouseName = borrowerModel.SpouseName,
-                    SpouseNidaNumber = borrowerModel.SpouseNidaNumber,
-                    Location = loc
+                    FirstName            = borrowerModel.FirstName,
+                    LastName             = borrowerModel.LastName,
+                    Gender               = borrowerModel.Gender,
+                    DOB                  = borrowerModel.DOB,
+                    MaritalStatus        = borrowerModel.MaritalStatus,
+                    SpouseName           = borrowerModel.SpouseName,
+                    SpouseNidaNumber     = borrowerModel.SpouseNidaNumber,
+                    Province             = borrowerModel.Province,
+                    District             = borrowerModel.District,
+                    Sector               = borrowerModel.Sector,
+                    Cell                 = borrowerModel.Cell,
+                    Village              = borrowerModel.Village,
                 });
                 Snackbar.Add("Borrower registered successfully", Severity.Success);
             }

@@ -1,6 +1,8 @@
+using Application.DTO;
+
 namespace Application.DTO
 {
-    public record BorrowerDTO
+    public record LoanApplicationDTO
     {
         public string? IdentificationNumber { get; set; }
         public string? FirstName { get; set; }
@@ -12,15 +14,9 @@ namespace Application.DTO
         public string? MaritalStatus { get; set; }
         public string? SpouseName { get; set; }
         public string? SpouseNidaNumber { get; set; }
-        // flat location fields to match entity
-        public string? Province { get; set; }
-        public string? District { get; set; }
-        public string? Sector { get; set; }
-        public string? Cell { get; set; }
-        public string? Village { get; set; }
     }
 
-    public record CreateBorrowerDTO
+    public record CreateLoanApplicationDTO
     {
         public string? IdentificationNumber { get; set; }
         public string? FirstName { get; set; }
@@ -32,15 +28,10 @@ namespace Application.DTO
         public string? MaritalStatus { get; set; }
         public string? SpouseName { get; set; }
         public string? SpouseNidaNumber { get; set; }
-        // flat location fields to match entity
-        public string? Province { get; set; }
-        public string? District { get; set; }
-        public string? Sector { get; set; }
-        public string? Cell { get; set; }
-        public string? Village { get; set; }
+        public LocationDTO Location { get; set; } = new();
     }
 
-    public record UpdateBorrowerDTO
+    public record UpdateLoanApplicationDTO
     {
         public string? IdentificationNumber { get; set; }
         public string? FirstName { get; set; }
@@ -52,11 +43,6 @@ namespace Application.DTO
         public string? MaritalStatus { get; set; }
         public string? SpouseName { get; set; }
         public string? SpouseNidaNumber { get; set; }
-        // flat location fields to match entity
-        public string? Province { get; set; }
-        public string? District { get; set; }
-        public string? Sector { get; set; }
-        public string? Cell { get; set; }
-        public string? Village { get; set; }
+        public LocationDTO Location { get; set; } = new();
     }
 }

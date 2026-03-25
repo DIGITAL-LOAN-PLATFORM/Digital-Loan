@@ -1,0 +1,162 @@
+@using Application.Interfaces
+@using Domain.ValueObjects
+@inject ILocationService LocationService
+
+<div class="form-group mb-3">
+    <label class="form-label">Province</label>
+    <select class="form-control" value="@_selectedProvinceName" @onchange="OnProvinceChanged">
+        <option value="">-- Select Province --</option>
+        @foreach (var province in _provinces)
+        {
+            <option value="@province.Name">@province.Name</option>
+        }
+    </select>
+</div>
+
+<div class="form-group mb-3">
+    <label class="form-label">District</label>
+    <select class="form-control" value="@_selectedDistrictName" @onchange="OnDistrictChanged" disabled="@(_districts.Count == 0)">
+        <option value="">-- Select District --</option>
+        @foreach (var district in _districts)
+        {
+            <option value="@district.Name">@district.Name</option>
+        }
+    </select>
+</div>
+
+<div class="form-group mb-3">
+    <label class="form-label">Sector</label>
+    <select class="form-control" value="@_selectedSectorName" @onchange="OnSectorChanged" disabled="@(_sectors.Count == 0)">
+        <option value="">-- Select Sector --</option>
+        @foreach (var sector in _sectors)
+        {
+            <option value="@sector.Name">@sector.Name</option>
+        }
+    </select>
+</div>
+
+<div class="form-group mb-3">
+    <label class="form-label">Cell</label>
+    <select class="form-control" value="@_selectedCellName" @onchange="OnCellChanged" disabled="@(_cells.Count == 0)">
+        <option value="">-- Select Cell --</option>
+        @foreach (var cell in _cells)
+        {
+            <option value="@cell.Name">@cell.Name</option>
+        }
+    </select>
+</div>
+
+<div class="form-group mb-3">
+    <label class="form-label">Village</label>
+    <select class="form-control" value="@_selectedVillageName" @onchange="OnVillageChanged" disabled="@(_villages.Count == 0)">
+        <option value="">-- Select Village --</option>
+        @foreach (var village in _villages)
+        {
+            <option value="@village.Name">@village.Name</option>
+        }
+    </select>
+</div>
+
+@code {
+    [Parameter] public string? SelectedVillage { get; set; }
+    [Parameter] public EventCallback<string?> SelectedVillageChanged { get; set; }
+    [Parameter] public string? FullAddress { get; set; }
+    [Parameter] public EventCallback<string?> FullAddressChanged { get; set; }
+
+    private List<Province> _provinces = [];
+    private List<District> _districts = [];
+    private List<Sector> _sectors = [];
+    private List<Cell> _cells = [];
+    private List<Village> _villages = [];
+
+    private string? _selectedProvinceName;
+    private string? _selectedDistrictName;
+    private string? _selectedSectorName;
+    private string? _selectedCellName;
+    private string? _selectedVillageName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _provinces = await LocationService.GetAllLocationsAsync() ?? [];
+    }
+
+    private async Task OnProvinceChanged(ChangeEventArgs args)
+    {
+        _selectedProvinceName = args.Value?.ToString();
+        var province = _provinces.FirstOrDefault(p => p.Name == _selectedProvinceName);
+        _districts = province?.Districts ?? [];
+
+        _selectedDistrictName = null;
+        _selectedSectorName = null;
+        _selectedCellName = null;
+        _selectedVillageName = null;
+        _sectors = [];
+        _cells = [];
+        _villages = [];
+
+        await PublishSelectionAsync();
+    }
+
+    private async Task OnDistrictChanged(ChangeEventArgs args)
+    {
+        _selectedDistrictName = args.Value?.ToString();
+        var district = _districts.FirstOrDefault(d => d.Name == _selectedDistrictName);
+        _sectors = district?.Sectors ?? [];
+
+        _selectedSectorName = null;
+        _selectedCellName = null;
+        _selectedVillageName = null;
+        _cells = [];
+        _villages = [];
+
+        await PublishSelectionAsync();
+    }
+
+    private async Task OnSectorChanged(ChangeEventArgs args)
+    {
+        _selectedSectorName = args.Value?.ToString();
+        var sector = _sectors.FirstOrDefault(s => s.Name == _selectedSectorName);
+        _cells = sector?.Cells ?? [];
+
+        _selectedCellName = null;
+        _selectedVillageName = null;
+        _villages = [];
+
+        await PublishSelectionAsync();
+    }
+
+    private async Task OnCellChanged(ChangeEventArgs args)
+    {
+        _selectedCellName = args.Value?.ToString();
+        var cell = _cells.FirstOrDefault(c => c.Name == _selectedCellName);
+        _villages = cell?.Villages ?? [];
+
+        _selectedVillageName = null;
+        await PublishSelectionAsync();
+    }
+
+    private async Task OnVillageChanged(ChangeEventArgs args)
+    {
+        _selectedVillageName = args.Value?.ToString();
+        await PublishSelectionAsync();
+    }
+
+    private async Task PublishSelectionAsync()
+    {
+        SelectedVillage = string.IsNullOrWhiteSpace(_selectedVillageName) ? null : _selectedVillageName;
+
+        var parts = new[]
+        {
+            _selectedVillageName,
+            _selectedCellName,
+            _selectedSectorName,
+            _selectedDistrictName,
+            _selectedProvinceName
+        }.Where(p => !string.IsNullOrWhiteSpace(p));
+
+        FullAddress = parts.Any() ? string.Join(", ", parts) : null;
+
+        await SelectedVillageChanged.InvokeAsync(SelectedVillage);
+        await FullAddressChanged.InvokeAsync(FullAddress);
+    }
+}

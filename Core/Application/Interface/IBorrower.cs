@@ -5,10 +5,11 @@ namespace Application.Interface
 {
     public interface IBorrower
     {
-        Task<Borrower?> GetByIdentificationNumberAsync(string identificationNumber);
         Task<List<Borrower>> GetAllBorrowersAsync();
         Task<Borrower?> GetByIdAsync(int id);
-        Task CreateBorrowerAsync(CreateBorrowerDTO borrowerDto);
-        Task UpdateBorrowerAsync(int id, UpdateBorrowerDTO borrowerDto);
+        Task<Borrower?> GetByIdentificationNumberAsync(string identificationNumber);
+        Task<Borrower> CreateBorrowerAsync(CreateBorrowerDTO dto);
+        Task<bool> UpdateBorrowerAsync(int id, UpdateBorrowerDTO dto);
+        Task<bool> DeleteBorrowerAsync(int id);
     }
 }

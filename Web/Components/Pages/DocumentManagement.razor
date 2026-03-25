@@ -1,0 +1,342 @@
+@page "/documentmanagement"
+@using Application.Services.RequiredDocuments
+@using Application.Services.DocumentTypes
+@using Application.DTO
+@using Domain.Entities
+@using MudBlazor
+@using Web.Components.Pages
+@using RDEntity = Domain.Entities.RequiredDocument
+@using Web.Components.Pages
+
+@inject IRequiredDocumentService RequiredDocumentService
+@inject IDocumentTypeService DocumentTypeService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+@namespace Web.Components.Pages
+
+
+<PageTitle>Document Management</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+
+    <MudText Typo="Typo.h4" Class="mb-1">Document Management</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+        Manage required documents and document types for loan applications.
+    </MudText>
+
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
+
+        
+        <MudTabPanel Text="Required Documents" Icon="@Icons.Material.Filled.Description">
+
+            <div class="d-flex justify-space-between align-center mb-4 mt-4">
+                <MudText Typo="Typo.h6">Required Documents</MudText>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateRequiredDocumentDialog">
+                    Add Required Document
+                </MudButton>
+            </div>
+
+            <MudDataGrid T="RDEntity"
+                         Items="_requiredDocuments"
+                         Hover="true"
+                         Striped="true"
+                         Dense="true"
+                         FilterMode="DataGridFilterMode.ColumnFilterRow"
+                         Loading="@_rdLoading"
+                         LoadingProgressColor="Color.Primary">
+                <Columns>
+                    <PropertyColumn Property="x => x.Id" Title="#" />
+                    <PropertyColumn Property="x => x.DocumentName" Title="Document Name" Sortable="true" Filterable="true" />
+                    <PropertyColumn Property="x => x.DocumentType" Title="Document Type" Sortable="true" Filterable="true" />
+                    <TemplateColumn Title="File" Sortable="false" Filterable="false">
+                        <CellTemplate>
+                            @if (!string.IsNullOrEmpty(context.Item.DocumentFile))
+                            {
+                                <MudChip T="string" Color="Color.Success" Size="Size.Small"
+                                         Icon="@Icons.Material.Filled.AttachFile">
+                                    Attached
+                                </MudChip>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Color="Color.Default" Size="Size.Small">None</MudChip>
+                            }
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Actions" Sortable="false" Filterable="false">
+                        <CellTemplate>
+                            <MudButtonGroup Variant="Variant.Text" Size="Size.Small">
+                                <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                               Color="Color.Info"
+                                               OnClick="@(() => ViewRequiredDocument(context.Item))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                               Color="Color.Warning"
+                                               OnClick="@(() => OpenEditRequiredDocumentDialog(context.Item))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                               Color="Color.Error"
+                                               OnClick="@(() => DeleteRequiredDocument(context.Item))" />
+                            </MudButtonGroup>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager T="RDEntity" />
+                </PagerContent>
+            </MudDataGrid>
+
+        </MudTabPanel>
+
+       
+        <MudTabPanel Text="Document Types" Icon="@Icons.Material.Filled.Category">
+
+            <div class="d-flex justify-space-between align-center mb-4 mt-4">
+                <MudText Typo="Typo.h6">Document Types</MudText>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateDocumentTypeDialog">
+                    Add Document Type
+                </MudButton>
+            </div>
+
+            <MudDataGrid T="DocumentType"
+                         Items="_documentTypes"
+                         Hover="true"
+                         Striped="true"
+                         Dense="true"
+                         FilterMode="DataGridFilterMode.ColumnFilterRow"
+                         Loading="@_dtLoading"
+                         LoadingProgressColor="Color.Primary">
+                <Columns>
+                    <PropertyColumn Property="x => x.Id" Title="#" />
+                    <PropertyColumn Property="x => x.DocumentName" Title="Document Type Name" Sortable="true" Filterable="true" />
+                    <TemplateColumn Title="Actions" Sortable="false" Filterable="false">
+                        <CellTemplate>
+                            <MudButtonGroup Variant="Variant.Text" Size="Size.Small">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                               Color="Color.Warning"
+                                               OnClick="@(() => OpenEditDocumentTypeDialog(context.Item))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                               Color="Color.Error"
+                                               OnClick="@(() => DeleteDocumentType(context.Item))" />
+                            </MudButtonGroup>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager T="DocumentType" />
+                </PagerContent>
+            </MudDataGrid>
+
+        </MudTabPanel>
+
+    </MudTabs>
+</MudContainer>
+
+
+<MudDialog @bind-Visible="_confirmVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@_confirmTitle</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>@_confirmMessage</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _confirmVisible = false)">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="OnConfirmYes">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    private List<RDEntity>     _requiredDocuments = new();
+    private List<DocumentType> _documentTypes     = new();
+    private bool _rdLoading = false;
+    private bool _dtLoading = false;
+
+    
+    private bool    _confirmVisible = false;
+    private string  _confirmTitle   = string.Empty;
+    private string  _confirmMessage = string.Empty;
+    private Func<Task>? _confirmAction;
+
+    private async Task OnConfirmYes()
+    {
+        _confirmVisible = false;
+        if (_confirmAction is not null)
+            await _confirmAction();
+    }
+
+    private void ShowConfirm(string title, string message, Func<Task> onConfirm)
+    {
+        _confirmTitle   = title;
+        _confirmMessage = message;
+        _confirmAction  = onConfirm;
+        _confirmVisible = true;
+    }
+
+
+    protected override void OnInitialized()
+    {
+        LoadRequiredDocuments();
+        LoadDocumentTypes();
+    }
+
+    private void LoadRequiredDocuments()
+    {
+        _rdLoading = true;
+        try   { _requiredDocuments = RequiredDocumentService.GetAllRequiredDocuments(new FilterRequiredDocumentDTO()); }
+        catch { Snackbar.Add("Failed to load required documents.", Severity.Error); }
+        finally { _rdLoading = false; }
+    }
+
+    private void LoadDocumentTypes()
+    {
+        _dtLoading = true;
+        try   { _documentTypes = DocumentTypeService.GetAllDocumentTypes(new FilterDocumentTypeDTO()); }
+        catch { Snackbar.Add("Failed to load document types.", Severity.Error); }
+        finally { _dtLoading = false; }
+    }
+
+    
+
+    private async Task OpenCreateRequiredDocumentDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            ["IsCreate"]            = true,
+            ["CreateModel"]         = new CreateRequiredDocumentDTO(),
+            ["DocumentTypeOptions"] = _documentTypes
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog  = await DialogService.ShowAsync<RequiredDocumentDialog>("Add Required Document", parameters, options);
+        var result  = await dialog.Result;
+
+        if (result is not null && !result.Canceled && result.Data is CreateRequiredDocumentDTO dto)
+        {
+            try
+            {
+                RequiredDocumentService.CreateRequiredDocument(dto);
+                Snackbar.Add("Required document added successfully.", Severity.Success);
+                LoadRequiredDocuments();
+            }
+            catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        }
+    }
+
+    private async Task OpenEditRequiredDocumentDialog(RDEntity entity)
+    {
+        var updateDto = new UpdateRequiredDocumentDTO
+        {
+            DocumentName = entity.DocumentName,
+            DocumentType = entity.DocumentType,
+            DocumentFile = entity.DocumentFile
+        };
+        var parameters = new DialogParameters
+        {
+            ["IsCreate"]            = false,
+            ["UpdateModel"]         = updateDto,
+            ["DocumentTypeOptions"] = _documentTypes
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog  = await DialogService.ShowAsync<RequiredDocumentDialog>("Edit Required Document", parameters, options);
+        var result  = await dialog.Result;
+
+        if (result is not null && !result.Canceled && result.Data is UpdateRequiredDocumentDTO dto)
+        {
+            try
+            {
+                RequiredDocumentService.UpdateRequiredDocument(entity.Id, dto);
+                Snackbar.Add("Required document updated successfully.", Severity.Success);
+                LoadRequiredDocuments();
+            }
+            catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        }
+    }
+
+    private void DeleteRequiredDocument(RDEntity entity)
+    {
+        ShowConfirm(
+            "Confirm Delete",
+            $"Delete '{entity.DocumentName}'? This cannot be undone.",
+            async () =>
+            {
+                await Task.CompletedTask;
+                Snackbar.Add("Delete not yet implemented on service.", Severity.Warning);
+            });
+    }
+
+    private void ViewRequiredDocument(RDEntity entity)
+        => Navigation.NavigateTo($"/requiredocuments/{entity.Id}");
+
+    
+    private async Task OpenCreateDocumentTypeDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            ["IsCreate"]    = true,
+            ["CreateModel"] = new CreateDocumentTypeDTO()
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true, CloseButton = true };
+        var dialog  = await DialogService.ShowAsync<DocumentTypeDialog>("Add Document Type", parameters, options);
+        var result  = await dialog.Result;
+
+        if (result is not null && !result.Canceled && result.Data is CreateDocumentTypeDTO dto)
+        {
+            try
+            {
+                DocumentTypeService.CreateDocumentType(dto);
+                Snackbar.Add("Document type added successfully.", Severity.Success);
+                LoadDocumentTypes();
+            }
+            catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        }
+    }
+
+    private async Task OpenEditDocumentTypeDialog(DocumentType entity)
+    {
+        var updateDto = new UpdateDocumentTypeDTO { DocumentName = entity.DocumentName };
+        var parameters = new DialogParameters
+        {
+            ["IsCreate"]    = false,
+            ["UpdateModel"] = updateDto
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true, CloseButton = true };
+        var dialog  = await DialogService.ShowAsync<DocumentTypeDialog>("Edit Document Type", parameters, options);
+        var result  = await dialog.Result;
+
+        if (result is not null && !result.Canceled && result.Data is UpdateDocumentTypeDTO dto)
+        {
+            try
+            {
+                DocumentTypeService.UpdateDocumentType(entity.Id, dto);
+                Snackbar.Add("Document type updated successfully.", Severity.Success);
+                LoadDocumentTypes();
+            }
+            catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        }
+    }
+
+    private void DeleteDocumentType(DocumentType entity)
+    {
+        ShowConfirm(
+            "Confirm Delete",
+            $"Delete document type '{entity.DocumentName}'? This cannot be undone.",
+            async () =>
+            {
+                try
+                {
+                    DocumentTypeService.DeleteDocumentType(entity.Id);
+                    Snackbar.Add("Document type deleted.", Severity.Success);
+                    LoadDocumentTypes();
+                }
+                catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+                await Task.CompletedTask;
+            });
+    }
+}

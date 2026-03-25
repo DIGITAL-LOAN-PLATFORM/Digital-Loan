@@ -10,38 +10,71 @@
     <MudDivider />
 
     <MudNavMenu Dense="true" Class="nav-menu" Color="Color.Primary">
-        <MudNavLink Href="/" 
-                    Match="NavLinkMatch.All" 
+
+        <MudNavLink Href="/"
+                    Match="NavLinkMatch.All"
                     Icon="@Icons.Material.Filled.Dashboard"
                     Class="nav-link">
             Dashboard
         </MudNavLink>
-    </MudNavMenu>
 
-    <MudNavMenu Dense="true" Class="nav-menu" Color="Color.Primary">
-        <MudNavLink Href="/requiredocuments" 
-                    Match="NavLinkMatch.All" 
+        <MudDivider Class="my-2" />
+
+        <MudText Typo="Typo.overline" Class="mud-text-secondary px-4 mt-2">Members</MudText>
+        <MudNavLink Href="/borrowers"
+                    Match="NavLinkMatch.All"
                     Icon="@Icons.Material.Filled.People"
+                    Class="nav-link">
+            Borrowers
+        </MudNavLink>
+
+        <MudDivider Class="my-2" />
+
+        <MudText Typo="Typo.overline" Class="mud-text-secondary px-4 mt-2">Loan Setup</MudText>
+        <MudNavLink Href="/loanproducts"
+                    Match="NavLinkMatch.All"
+                    Icon="@Icons.Material.Filled.AccountBalance"
+                    Class="nav-link">
+            Loan Products
+        </MudNavLink>
+        <MudNavLink Href="/paymentmodality"
+                    Match="NavLinkMatch.All"
+                    Icon="@Icons.Material.Filled.Payments"
+                    Class="nav-link">
+            Payment Modalities
+        </MudNavLink>
+
+        <MudDivider Class="my-2" />
+
+        <MudText Typo="Typo.overline" Class="mud-text-secondary px-4 mt-2">Documents</MudText>
+        <MudNavLink Href="/documentmanagement"
+                    Match="NavLinkMatch.All"
+                    Icon="@Icons.Material.Filled.Description"
+                    Class="nav-link">
+            Document Management
+        </MudNavLink>
+        <MudNavLink Href="/requiredocuments"
+                    Match="NavLinkMatch.All"
+                    Icon="@Icons.Material.Filled.FileCopy"
                     Class="nav-link">
             Required Documents
         </MudNavLink>
-        
-        
-        
-        @* <MudNavLink Href="/campaigns" 
-                    Match="NavLinkMatch.All" 
-                    Icon="@Icons.Material.Filled.Campaign"
+        <MudNavLink Href="/provideddocuments"
+                    Match="NavLinkMatch.All"
+                    Icon="@Icons.Material.Filled.UploadFile"
                     Class="nav-link">
-            Campaigns
+            Provided Documents
         </MudNavLink>
-        
-        <AuthorizeView Roles="Admin">
-            <MudNavLink Href="/users" 
-                        Match="NavLinkMatch.All" 
-                        Icon="@Icons.Material.Filled.Person"
-                        Class="nav-link">
-                Users
-            </MudNavLink>
-        </AuthorizeView> *@
+
+        <MudDivider Class="my-2" />
+
+        <MudText Typo="Typo.overline" Class="mud-text-secondary px-4 mt-2">Configuration</MudText>
+        <MudNavLink Href="/guarantortype"
+                    Match="NavLinkMatch.All"
+                    Icon="@Icons.Material.Filled.VerifiedUser"
+                    Class="nav-link">
+            Guarantor Types
+        </MudNavLink>
+
     </MudNavMenu>
 </MudStack>

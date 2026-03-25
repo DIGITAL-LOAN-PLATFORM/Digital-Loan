@@ -1,0 +1,65 @@
+@namespace Web.Components.Pages
+@using Application.DTO
+@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            @(IsCreate ? "Add Document Type" : "Edit Document Type")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form">
+            @if (IsCreate)
+            {
+                <MudTextField @bind-Value="CreateModel!.DocumentName"
+                              Label="Document Type Name"
+                              Required="true"
+                              RequiredError="Name is required"
+                              Variant="Variant.Outlined" />
+            }
+            else
+            {
+                <MudTextField @bind-Value="UpdateModel!.DocumentName"
+                              Label="Document Type Name"
+                              Required="true"
+                              RequiredError="Name is required"
+                              Variant="Variant.Outlined" />
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="OnValidSubmit">
+            @(IsCreate ? "Create" : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public bool IsCreate { get; set; } = true;
+    [Parameter] public CreateDocumentTypeDTO? CreateModel { get; set; }
+    [Parameter] public UpdateDocumentTypeDTO? UpdateModel { get; set; }
+
+    private MudForm? _form;
+
+    protected override void OnInitialized()
+    {
+        CreateModel ??= new CreateDocumentTypeDTO();
+        UpdateModel ??= new UpdateDocumentTypeDTO();
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task OnValidSubmit()
+    {
+        await _form!.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        if (IsCreate)
+            MudDialog.Close(DialogResult.Ok(CreateModel));
+        else
+            MudDialog.Close(DialogResult.Ok(UpdateModel));
+    }
+}
