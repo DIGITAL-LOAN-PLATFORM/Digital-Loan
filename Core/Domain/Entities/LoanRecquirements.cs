@@ -1,15 +1,16 @@
-// namespace Domain.Entities
-// {
+namespace Domain.Entities
+{
 
-//     public class LoanRecquirements{
+    public class LoanRecquirements{
 
-//         public int Id { get; set; }
-//         public ReuiredDocument RequirementDocument{ get; set; }
-//         public LoanProduct  LoanProduct { get; set; }
-//         public int RequirementDocumentId { get; set; }
-//         public int LoanProductId { get; set; }
-//          public DateTime CreatedAt { get; set; }
-//     }
+        public int Id { get; set; }
+      public RecquiredDocument? RecquiredDocument { get; set; } 
+        public LoanProduct? LoanProduct { get; set; }
+        
+        public int RecquiredDocumentId { get; set; }
+        public int LoanProductId { get; set; }
+         public DateTime CreatedAt { get; set; }
+    }
 
    
-// }
+}

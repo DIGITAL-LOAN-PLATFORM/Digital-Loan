@@ -1,6 +1,8 @@
 using Application.Interface;
 using Application.Interfaces;
+
 using Infrastructure.Data;
+
 using Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -25,14 +27,25 @@ namespace Infrastructure.DependencyInjection
                 options.UseSqlServer(
                     configuration.GetConnectionString("DigitalLoanMSSQLConnection")),
                     ServiceLifetime.Scoped);
+            services.AddDbContext<Data.ApplicationDbContext>(options =>
+            options.UseSqlServer(configuration.GetConnectionString("DigitalLoanMSSQLConnection")));
+            
+            //Register identity services
+            
 
-<<<<<<< HEAD
+            //Register Repositories
+           
+            services.AddScoped<IAccount , AccountRepository>();
+          
+            // Add infrastructure services here, e.g., DbContext, Repositories, etc.
+            
+            );
+
             // Repositories — only add ones that actually exist
             services.AddScoped<IRequiredDocument,  RequiredDocumentRepository>();
             services.AddScoped<IDocumentType,       DocumentTypeRepository>();
             services.AddScoped<IBorrower,           BorrowerRepository>();
              services.AddScoped<IProvidedDocument,           ProvidedDocumentRepository>();
-=======
             // // Register identity service
             // services.AddAuthenticationService(configuration);
 
@@ -49,7 +62,10 @@ namespace Infrastructure.DependencyInjection
                 services.AddScoped<ILoanApplication, LoanApplicationRepository>();
                 services.AddScoped<global::Application.Interface.ILocationService, global::Application.Services.Locations.LocationService>();
                 // ILocationService directly registered via app services (in Program.cs)
-               
+                services.AddScoped<IPayment, PaymentRepository>();
+                services.AddScoped<IPaymentType, PaymentTypeRepository>();
+                services.AddScoped<IReason, ReasonRepository>();
+                services.AddScoped<IPenalty, PenaltyRepository>();
 
             // Register Repositories 
             services.AddScoped<IRequiredDocument, RequiredDocumentRepository>();
@@ -58,7 +74,7 @@ namespace Infrastructure.DependencyInjection
 
             // Register Data Seeder
             // services.AddScoped<IDataSeeder, DataSeeder>();
->>>>>>> fb620d7d9a732b664595c86cf34c364f450eb3de
+
 
             return services;
         }

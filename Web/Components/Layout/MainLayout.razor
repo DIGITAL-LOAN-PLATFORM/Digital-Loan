@@ -120,6 +120,39 @@
     {
         _drawerOpen = !_drawerOpen;
     }
+<<<<<<< HEAD
+}
+
+
+@* @inherits LayoutComponentBase
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+<MudLayout>
+    <MudAppBar>
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        My Application
+    </MudAppBar>
+    <MudDrawer @bind-Open="@_drawerOpen">
+        <NavMenu/>
+    </MudDrawer>
+    <MudMainContent>
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    bool _drawerOpen = true;
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div> *@
+=======
 
     void ToggleTheme()
     {
@@ -131,3 +164,4 @@
         Navigation.NavigateTo("/account/logout", forceLoad: true);
     }
 }
+>>>>>>> 8b26a51bdf784e04111b2993293fca12b6772dcf

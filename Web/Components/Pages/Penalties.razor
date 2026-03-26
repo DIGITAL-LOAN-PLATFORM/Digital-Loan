@@ -1,0 +1,84 @@
+@page "/penalties"
+@using Application.Interface
+@using Domain.Entities
+@using MudBlazor
+@inject IPenaltyService PenaltyService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Penalties</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">Penalties</MudText>
+
+<MudTable Items="@_penalties" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Elevation="2">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">All Penalties</MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add">
+            Add Penalty
+        </MudButton>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>ID</MudTh>
+        <MudTh>Loan Disbursement</MudTh>
+        <MudTh>Penalty Amount</MudTh>
+        <MudTh>Reason</MudTh>
+        <MudTh>Confirmed By</MudTh>
+        <MudTh>Created At</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="ID">@context.Id</MudTd>
+        <MudTd DataLabel="Loan Disbursement">@context.LoanDisbursementId</MudTd>
+        <MudTd DataLabel="Penalty Amount">@context.PenaltyAmount.ToString("N2")</MudTd>
+        <MudTd DataLabel="Reason">@context.PenaltyReason?.Name</MudTd>
+        <MudTd DataLabel="Confirmed By">@context.ConfirmedByUserId</MudTd>
+        <MudTd DataLabel="Created At">@context.CreatedAt.ToString("dd/MM/yyyy")</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" OnClick="@(() => OpenUpdateDialog(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeletePenalty(context.Id))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<Penalty> _penalties = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadPenalties();
+
+    private async Task LoadPenalties()
+    {
+        _loading = true;
+        try { _penalties = await PenaltyService.GetAllPenaltiesAsync(); }
+        finally { _loading = false; }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        var parameters = new DialogParameters { ["PenaltyId"] = 0 };
+        var dialog = await DialogService.ShowAsync<PenaltyDialog>("Add Penalty", parameters, options);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadPenalties();
+    }
+
+    private async Task OpenUpdateDialog(Penalty penalty)
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        var parameters = new DialogParameters { ["PenaltyId"] = penalty.Id };
+        var dialog = await DialogService.ShowAsync<PenaltyDialog>("Update Penalty", parameters, options);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadPenalties();
+    }
+
+    private async Task DeletePenalty(int id)
+    {
+        try
+        {
+            await PenaltyService.DeletePenaltyAsync(id);
+            Snackbar.Add("Penalty deleted", Severity.Success);
+            await LoadPenalties();
+        }
+        catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    }
+}

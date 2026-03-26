@@ -1,0 +1,86 @@
+@page "/payments"
+@using Application.Interface
+@using Domain.Entities
+@using MudBlazor
+@inject IPaymentService PaymentService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Payments</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">Payments</MudText>
+
+<MudTable Items="@_payments" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Elevation="2">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">All Payments</MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add">
+            Record Payment
+        </MudButton>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>ID</MudTh>
+        <MudTh>Loan Disbursement</MudTh>
+        <MudTh>Amount Paid</MudTh>
+        <MudTh>Penalty Allocated</MudTh>
+        <MudTh>Payment Type</MudTh>
+        <MudTh>Account</MudTh>
+        <MudTh>Payment Date</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="ID">@context.Id</MudTd>
+        <MudTd DataLabel="Loan Disbursement">@context.LoanDisbursementId</MudTd>
+        <MudTd DataLabel="Amount Paid">@context.TotalAmountPaid.ToString("N2")</MudTd>
+        <MudTd DataLabel="Penalty Allocated">@context.PenaltyAllocated.ToString("N2")</MudTd>
+        <MudTd DataLabel="Payment Type">@context.PaymentType?.Name</MudTd>
+        <MudTd DataLabel="Account">@context.Account?.Id</MudTd>
+        <MudTd DataLabel="Payment Date">@context.PaymentDate.ToString("dd/MM/yyyy")</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" OnClick="@(() => OpenUpdateDialog(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeletePayment(context.Id))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<Payment> _payments = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadPayments();
+
+    private async Task LoadPayments()
+    {
+        _loading = true;
+        try { _payments = await PaymentService.GetAllPaymentsAsync(); }
+        finally { _loading = false; }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        var parameters = new DialogParameters { ["PaymentId"] = 0 };
+        var dialog = await DialogService.ShowAsync<PaymentDialog>("Record Payment", parameters, options);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadPayments();
+    }
+
+    private async Task OpenUpdateDialog(Payment payment)
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        var parameters = new DialogParameters { ["PaymentId"] = payment.Id };
+        var dialog = await DialogService.ShowAsync<PaymentDialog>("Update Payment", parameters, options);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadPayments();
+    }
+
+    private async Task DeletePayment(int id)
+    {
+        try
+        {
+            await PaymentService.DeletePaymentAsync(id);
+            Snackbar.Add("Payment deleted", Severity.Success);
+            await LoadPayments();
+        }
+        catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    }
+}

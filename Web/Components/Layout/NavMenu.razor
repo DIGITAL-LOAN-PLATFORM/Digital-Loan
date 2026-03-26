@@ -7,6 +7,19 @@
         </MudStack>
     </MudStack>
 ﻿<MudNavMenu>
+    <MudNavLink Href="/" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+    <MudNavLink Href="/servers" Match="NavLinkMatch.Prefix">Servers</MudNavLink>
+    <MudNavLink Href="/account" Match="NavLinkMatch.Prefix">Accounts</MudNavLink>
+    <MudNavGroup Title="Settings" Expanded="true">
+        <MudNavLink Href="/users"  Match="NavLinkMatch.Prefix">Users</MudNavLink>
+        <MudNavLink Href="/security"  Match="NavLinkMatch.Prefix">Security</MudNavLink>
+    </MudNavGroup>
+    <MudNavLink Href="/about"  Match="NavLinkMatch.Prefix">About</MudNavLink>
+</MudNavMenu>
+
+@* <div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">Web</a>
     <div class="d-flex align-center px-4 py-2 nav-section-title rounded-lg mx-2">
         <MudIcon Icon="@Icons.Material.Filled.Home" Color="Color.Primary" Size="Size.Small" Class="mr-2"/>
         <MudText Typo="Typo.subtitle2" Style="font-weight: bold;">Loan Mgnt</MudText>
@@ -19,6 +32,45 @@
 
     <MudDivider />
 
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+
+    <MudNavGroup Title="Setting" Icon="@Icons.Material.Filled.Settings">
+        <MudNavLink Href="/guarantortype">Guarantor Type</MudNavLink>
+        <MudNavLink Href="/paymentmodality">Payment Modality</MudNavLink>
+        <MudNavLink Href="/loanproducts">Loan Products</MudNavLink>
+    </MudNavGroup>
+    <MudNavGroup Title="Payments" Icon="@Icons.Material.Filled.Payment">
+    <MudNavLink Href="/payments" Icon="@Icons.Material.Filled.List">Payments</MudNavLink>
+    <MudNavLink Href="/payment-types" Icon="@Icons.Material.Filled.Category">Payment Types</MudNavLink>
+</MudNavGroup>
+
+     <MudNavGroup Title="Penalties" Icon="@Icons.Material.Filled.Gavel">    
+    <MudNavLink Href="/penalties" Icon="@Icons.Material.Filled.List">Penalties</MudNavLink>
+    <MudNavLink Href="/reasons" Icon="@Icons.Material.Filled.Notes">Reasons</MudNavLink>
+</MudNavGroup>
+
+        
+</MudNavMenu>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="counter">
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="weather">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
+            </NavLink>
+        </div>
+    </nav>
+</div>
+ *@
     <MudNavMenu Dense="true" Class="nav-menu" Color="Color.Primary">
 
         <MudNavLink Href="/"
@@ -88,3 +140,4 @@
 
     </MudNavMenu>
 </MudStack>
+
