@@ -2,13 +2,26 @@ using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 
-namespace Infrastructure.Data
+namespace Infrastructure.Data;
+
+public class ApplicationDbContext : DbContext
 {
-    public class ApplicationDbContext : DbContext
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        : base(options) { }
+
+    public DbSet<Borrower> Borrowers { get; set; }
+    public DbSet<LoanProduct> LoanProducts { get; set; }
+    public DbSet<ProvidedDocument> ProvidedDocuments { get; set; }
+    public DbSet<RequiredDocument> RequiredDocuments { get; set; }
+    public DbSet<GuarantorType> GuarantorTypes { get; set; }
+    public DbSet<PaymentModality> PaymentModalities { get; set; }
+    public DbSet<Guarantor> Guarantors { get; set; }
+    public DbSet<LoanApplication> LoanApplications { get; set; }
+    public DbSet<DocumentType> DocumentTypes { get; set; }   // ← add this
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
-        {
-        }
+        base.OnModelCreating(modelBuilder);
 
         public DbSet<Account> Accounts { get; set; }
         public DbSet<Borrower> Borrowers { get; set; }
@@ -115,14 +128,13 @@ namespace Infrastructure.Data
             modelBuilder.Entity<Borrower>().HasQueryFilter(b => b.IsActive);
             base.OnModelCreating(builder);
 
-            // builder.Entity<Guest>()
-            //     .Property(t => t.GuestStatus)
-            //     .HasConversion<string>();
+        modelBuilder.Entity<Guarantor>()
+            .HasOne(g => g.GuarantorType)
+            .WithMany()
+            .HasForeignKey(g => g.GuarantorTypeId)
+            .OnDelete(DeleteBehavior.NoAction);
 
-            builder.Entity<RequiredDocument>()
-                .Property(c => c.DocumentType)
-                .HasConversion<string>();
-        }
+        // RequiredDocument has no FK navigation now — no cascade config needed
     }
 }
 

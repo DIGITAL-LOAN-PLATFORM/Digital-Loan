@@ -1,0 +1,111 @@
+@namespace Web.Components.Pages
+@using Application.DTO
+@using Microsoft.AspNetCore.Components.Forms
+@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@(IsCreate ? Icons.Material.Filled.NoteAdd : Icons.Material.Filled.Edit)" Class="mr-2 mb-1" />
+            @(IsCreate ? "Add Provided Document" : "Edit Provided Document")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form">
+            @if (IsCreate)
+            {
+                <MudTextField @bind-Value="CreateModel!.DocumentName"
+                              Label="Document Name"
+                              Required="true"
+                              RequiredError="Document name is required"
+                              Variant="Variant.Outlined"
+                              Class="mb-3" />
+
+                <MudText Typo="Typo.body2" Class="mb-1">Upload Files</MudText>
+                <InputFile OnChange="HandleCreateFiles" multiple class="mb-3" />
+
+                @if (_selectedFileNames.Any())
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">Selected files:</MudText>
+                    @foreach (var name in _selectedFileNames)
+                    {
+                        <MudChip T="string" Icon="@Icons.Material.Filled.AttachFile" Color="Color.Primary" Size="Size.Small">
+                            @name
+                        </MudChip>
+                    }
+                }
+            }
+            else
+            {
+                <MudTextField @bind-Value="UpdateModel!.DocumentName"
+                              Label="Document Name"
+                              Required="true"
+                              RequiredError="Document name is required"
+                              Variant="Variant.Outlined"
+                              Class="mb-3" />
+
+                <MudText Typo="Typo.body2" Class="mb-1">Upload New Files (replaces existing)</MudText>
+                <InputFile OnChange="HandleUpdateFiles" multiple class="mb-3" />
+
+                @if (_selectedFileNames.Any())
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">Selected files:</MudText>
+                    @foreach (var name in _selectedFileNames)
+                    {
+                        <MudChip T="string" Icon="@Icons.Material.Filled.AttachFile" Color="Color.Primary" Size="Size.Small">
+                            @name
+                        </MudChip>
+                    }
+                }
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="OnValidSubmit">
+            @(IsCreate ? "Create" : "Save Changes")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public bool IsCreate { get; set; } = true;
+    [Parameter] public CreateProvidedDocumentDTO? CreateModel { get; set; }
+    [Parameter] public UpdateProvidedDocumentDTO? UpdateModel { get; set; }
+
+    private MudForm? _form;
+    private List<string> _selectedFileNames = new();
+
+    protected override void OnInitialized()
+    {
+        CreateModel ??= new CreateProvidedDocumentDTO();
+        UpdateModel ??= new UpdateProvidedDocumentDTO();
+    }
+
+    private void HandleCreateFiles(InputFileChangeEventArgs e)
+    {
+        CreateModel!.DocumentFiles = e.GetMultipleFiles();
+        _selectedFileNames = e.GetMultipleFiles().Select(f => f.Name).ToList();
+    }
+
+    private void HandleUpdateFiles(InputFileChangeEventArgs e)
+    {
+        UpdateModel!.DocumentFiles = e.GetMultipleFiles();
+        _selectedFileNames = e.GetMultipleFiles().Select(f => f.Name).ToList();
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task OnValidSubmit()
+    {
+        await _form!.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        if (IsCreate)
+            MudDialog.Close(DialogResult.Ok(CreateModel));
+        else
+            MudDialog.Close(DialogResult.Ok(UpdateModel));
+    }
+}

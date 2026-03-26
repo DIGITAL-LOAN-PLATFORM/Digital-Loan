@@ -1,40 +1,87 @@
+@namespace Web.Components.Pages
 @using Application.DTO
+@using Domain.Entities
 @using MudBlazor
 
 <MudDialog>
     <TitleContent>
-        <MudText Typo="Typo.h6">@Title</MudText>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@(IsCreate ? Icons.Material.Filled.NoteAdd : Icons.Material.Filled.Edit)" Class="mr-2 mb-1" />
+            @(IsCreate ? "Add Required Document" : "Edit Required Document")
+        </MudText>
     </TitleContent>
     <DialogContent>
-        @if (IsCreate)
-        {
-            <MudTextField @bind-Value="CreateModel!.DocumentName"
-                          Label="Document Name"
-                          Variant="Variant.Outlined"
-                          Class="mb-3" />
-            <MudTextField @bind-Value="CreateModel!.DocumentType"
-                          Label="Document Type"
-                          Variant="Variant.Outlined"
-                          Class="mb-3" />
-        }
-        else
-        {
-            <MudTextField @bind-Value="UpdateModel!.DocumentName"
-                          Label="Document Name"
-                          Variant="Variant.Outlined"
-                          Class="mb-3" />
-            <MudTextField @bind-Value="UpdateModel!.DocumentType"
-                          Label="Document Type"
-                          Variant="Variant.Outlined"
-                          Class="mb-3" />
-        }
+        <MudForm @ref="_form">
+            @if (IsCreate)
+            {
+                <MudTextField @bind-Value="CreateModel!.DocumentName"
+                              Label="Document Name"
+                              Required="true"
+                              RequiredError="Document name is required"
+                              Variant="Variant.Outlined"
+                              Class="mb-3" />
+
+                <MudSelect T="string"
+                           @bind-Value="CreateModel!.DocumentType"
+                           Label="Document Type"
+                           Required="true"
+                           RequiredError="Document type is required"
+                           Variant="Variant.Outlined"
+                           Class="mb-3">
+                    @if (DocumentTypeOptions != null)
+                    {
+                        @foreach (var dt in DocumentTypeOptions)
+                        {
+                            <MudSelectItem Value="@dt.DocumentName">@dt.DocumentName</MudSelectItem>
+                        }
+                    }
+                    <MudSelectItem Value="@("Other")">Other</MudSelectItem>
+                </MudSelect>
+
+                <MudTextField @bind-Value="CreateModel!.DocumentFile"
+                              Label="Document File Reference (optional)"
+                              Placeholder="e.g. path/filename.pdf"
+                              Variant="Variant.Outlined"
+                              Class="mb-3" />
+            }
+            else
+            {
+                <MudTextField @bind-Value="UpdateModel!.DocumentName"
+                              Label="Document Name"
+                              Required="true"
+                              RequiredError="Document name is required"
+                              Variant="Variant.Outlined"
+                              Class="mb-3" />
+
+                <MudSelect T="string"
+                           @bind-Value="UpdateModel!.DocumentType"
+                           Label="Document Type"
+                           Required="true"
+                           RequiredError="Document type is required"
+                           Variant="Variant.Outlined"
+                           Class="mb-3">
+                    @if (DocumentTypeOptions != null)
+                    {
+                        @foreach (var dt in DocumentTypeOptions)
+                        {
+                            <MudSelectItem Value="@dt.DocumentName">@dt.DocumentName</MudSelectItem>
+                        }
+                    }
+                    <MudSelectItem Value="@("Other")">Other</MudSelectItem>
+                </MudSelect>
+
+                <MudTextField @bind-Value="UpdateModel!.DocumentFile"
+                              Label="Document File Reference (optional)"
+                              Placeholder="e.g. path/filename.pdf"
+                              Variant="Variant.Outlined"
+                              Class="mb-3" />
+            }
+        </MudForm>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary"
-                   Variant="Variant.Filled"
-                   OnClick="OnValidSubmit">
-            @SubmitText
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="OnValidSubmit">
+            @(IsCreate ? "Create" : "Save Changes")
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -45,9 +92,9 @@
     [Parameter] public bool IsCreate { get; set; } = true;
     [Parameter] public CreateRequiredDocumentDTO? CreateModel { get; set; }
     [Parameter] public UpdateRequiredDocumentDTO? UpdateModel { get; set; }
+    [Parameter] public List<DocumentType>? DocumentTypeOptions { get; set; }
 
-    private string Title => IsCreate ? "Create Required Document" : "Edit Required Document";
-    private string SubmitText => IsCreate ? "Create" : "Save";
+    private MudForm? _form;
 
     protected override void OnInitialized()
     {
@@ -57,17 +104,14 @@
 
     private void Cancel() => MudDialog.Cancel();
 
-    private void OnValidSubmit()
+    private async Task OnValidSubmit()
     {
+        await _form!.ValidateAsync();
+        if (!_form.IsValid) return;
+
         if (IsCreate)
-        {
-            if (string.IsNullOrWhiteSpace(CreateModel?.DocumentName)) return;
             MudDialog.Close(DialogResult.Ok(CreateModel));
-        }
         else
-        {
-            if (string.IsNullOrWhiteSpace(UpdateModel?.DocumentName)) return;
             MudDialog.Close(DialogResult.Ok(UpdateModel));
-        }
     }
 }

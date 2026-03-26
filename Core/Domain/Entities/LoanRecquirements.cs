@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-using Domain.Entities;
-=======
->>>>>>> 8b26a51bdf784e04111b2993293fca12b6772dcf
 namespace Domain.Entities
 {
 

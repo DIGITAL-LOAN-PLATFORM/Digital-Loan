@@ -1,5 +1,3 @@
-using Application.DTO;
-
 namespace Application.DTO
 {
     public record BorrowerDTO
@@ -14,6 +12,12 @@ namespace Application.DTO
         public string? MaritalStatus { get; set; }
         public string? SpouseName { get; set; }
         public string? SpouseNidaNumber { get; set; }
+        // flat location fields to match entity
+        public string? Province { get; set; }
+        public string? District { get; set; }
+        public string? Sector { get; set; }
+        public string? Cell { get; set; }
+        public string? Village { get; set; }
     }
 
     public record CreateBorrowerDTO
@@ -28,7 +32,12 @@ namespace Application.DTO
         public string? MaritalStatus { get; set; }
         public string? SpouseName { get; set; }
         public string? SpouseNidaNumber { get; set; }
-        public LocationDTO Location { get; set; } = new();
+        // flat location fields to match entity
+        public string? Province { get; set; }
+        public string? District { get; set; }
+        public string? Sector { get; set; }
+        public string? Cell { get; set; }
+        public string? Village { get; set; }
     }
 
     public record UpdateBorrowerDTO
@@ -43,6 +52,11 @@ namespace Application.DTO
         public string? MaritalStatus { get; set; }
         public string? SpouseName { get; set; }
         public string? SpouseNidaNumber { get; set; }
-        public LocationDTO Location { get; set; } = new();
+        // flat location fields to match entity
+        public string? Province { get; set; }
+        public string? District { get; set; }
+        public string? Sector { get; set; }
+        public string? Cell { get; set; }
+        public string? Village { get; set; }
     }
 }

@@ -4,6 +4,16 @@ using System.Text.Json;
 using Web.Components;
 using MudBlazor.Services;
 using Application.Services.RequiredDocuments;
+using Application.Services.ProvidedDocuments;
+using Application.Services.DocumentTypes;
+using Application.Services.Borrowers;      
+using Application.Services;               
+using Infrastructure.DependencyInjection;
+using Application.Interface;
+using Infrastructure.Services;
+using Infrastructure.DependencyInjection; 
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using Domain.Entities;
 using Application.Services;
 using Application.Interface;
@@ -22,16 +32,28 @@ using Microsoft.Extensions.DependencyInjection;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Components;
 using Application.Interfaces;
+
+
 using Infrastructure.Repositories;
 using Application.Services.Accounts;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddMudServices();
-
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+
+
+// Location Service
+builder.Services.AddSingleton<ILocationService>(sp =>
+{
+    var env    = sp.GetRequiredService<IWebHostEnvironment>();
+    var logger = sp.GetRequiredService<ILogger<JsonLocationService>>();
+    return new JsonLocationService(env.WebRootFileProvider, logger);
+});
+
+// Application Services
     builder.Services.AddMudServices();
 
 
@@ -47,6 +69,9 @@ builder.Services.AddScoped<IAccountService, AccountService>();
 
 // builder.Services.AddScoped<IGuestService, GuestService>();
 builder.Services.AddScoped<IRequiredDocumentService, RequiredDocumentService>();
+builder.Services.AddScoped<IDocumentTypeService,     DocumentTypeService>();
+builder.Services.AddScoped<IBorrowerService,         BorrowerService>();
+builder.Services.AddScoped<IProvidedDocumentService, ProvidedDocumentService>();
     // add controllers for acount endpoints (login/logout)
 
     builder.Services.AddControllers();
@@ -71,13 +96,6 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddControllers();
 
 var app = builder.Build();
-
-// Run seeder
-// using (var scope = app.Services.CreateScope())
-// {
-//     var seeder = scope.ServiceProvider.GetRequiredService<IDataSeeder>();
-//     await seeder.SeedAsync();
-// }
 
 if (!app.Environment.IsDevelopment())
 {

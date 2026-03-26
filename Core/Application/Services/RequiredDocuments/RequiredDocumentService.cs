@@ -6,32 +6,31 @@ namespace Application.Services.RequiredDocuments
 {
     public class RequiredDocumentService : IRequiredDocumentService
     {
-        private readonly IRequiredDocument _RequiredDocument;
+        private readonly IRequiredDocument _requiredDocument;
 
-        
         public RequiredDocumentService(IRequiredDocument requiredDocument)
         {
-            _RequiredDocument = requiredDocument;
+            _requiredDocument = requiredDocument;
         }
 
         public RequiredDocument? GetRequiredDocumentById(int id)
         {
-            return _RequiredDocument.GetRequiredDocumentById(id);
+            return _requiredDocument.GetRequiredDocumentById(id);
         }
 
         public List<RequiredDocument> GetAllRequiredDocuments(FilterRequiredDocumentDTO filter)
         {
-            return _RequiredDocument.GetAllRequiredDocuments(filter);
+            return _requiredDocument.GetAllRequiredDocuments(filter);
         }
 
-        public void CreateRequiredDocument(CreateRequiredDocumentDTO requiredDocumentDTO)
+        public void CreateRequiredDocument(CreateRequiredDocumentDTO dto)
         {
-            _RequiredDocument.CreateRequiredDocument(requiredDocumentDTO);
+            _requiredDocument.CreateRequiredDocument(dto);
         }
 
-        public void UpdateRequiredDocument(int id, UpdateRequiredDocumentDTO requiredDocumentDTO)
+        public void UpdateRequiredDocument(int id, UpdateRequiredDocumentDTO dto)
         {
-            _RequiredDocument.UpdateRequiredDocument(id, requiredDocumentDTO);
+            _requiredDocument.UpdateRequiredDocument(id, dto);
         }
     }
 }

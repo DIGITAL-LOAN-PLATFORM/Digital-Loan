@@ -1,12 +1,11 @@
-@page "/requiredocuments/{Id:int}"
-@using Domain.Entities
-@using Application.Services.RequiredDocuments
+@page "/provideddocuments/{Id:int}"
 @using Application.DTO
+@using Application.Services.ProvidedDocuments
 @using MudBlazor
-@inject IRequiredDocumentService RequiredDocumentService
+@inject IProvidedDocumentService ProvidedDocumentService
 @inject NavigationManager Navigation
 
-<PageTitle>Required Document Detail</PageTitle>
+<PageTitle>Provided Document Detail</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-6">
     @if (_document == null)
@@ -19,7 +18,7 @@
             <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
                            OnClick="GoBack"
                            Class="mr-2" />
-            <MudText Typo="Typo.h5">Required Document Detail</MudText>
+            <MudText Typo="Typo.h5">Provided Document Detail</MudText>
         </div>
 
         <MudPaper Elevation="2" Class="pa-6">
@@ -32,9 +31,9 @@
                 </MudItem>
 
                 <MudItem xs="12" sm="6">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">Document Type</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Loan Application ID</MudText>
                     <MudText Typo="Typo.body1" Class="mt-1">
-                        @(_document.DocumentType ?? "—")
+                        @_document.IdLoanApplication
                     </MudText>
                 </MudItem>
 
@@ -43,20 +42,24 @@
                 </MudItem>
 
                 <MudItem xs="12">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">Document File Reference</MudText>
-                    @if (!string.IsNullOrEmpty(_document.DocumentFile))
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Attached Files</MudText>
+                    @if (_document.DocumentFiles.Any())
                     {
-                        <MudChip T="string"
-                                 Icon="@Icons.Material.Filled.AttachFile"
-                                 Color="Color.Primary"
-                                 Class="mt-1">
-                            @_document.DocumentFile
-                        </MudChip>
+                        <MudStack Row="true" Wrap="Wrap.Wrap" Class="mt-2">
+                            @foreach (var file in _document.DocumentFiles)
+                            {
+                                <MudChip T="string"
+                                         Icon="@Icons.Material.Filled.AttachFile"
+                                         Color="Color.Primary">
+                                    @file.FileName
+                                </MudChip>
+                            }
+                        </MudStack>
                     }
                     else
                     {
                         <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
-                            No file attached
+                            No files attached
                         </MudText>
                     }
                 </MudItem>
@@ -76,12 +79,12 @@
 @code {
     [Parameter] public int Id { get; set; }
 
-    private Domain.Entities.RequiredDocument? _document;
+    private ProvidedDocumentDTO? _document;
 
     protected override void OnInitialized()
     {
-        _document = RequiredDocumentService.GetRequiredDocumentById(Id);
+        _document = ProvidedDocumentService.GetProvidedDocumentById(Id);
     }
 
-    private void GoBack() => Navigation.NavigateTo("/documentmanagement");
+    private void GoBack() => Navigation.NavigateTo("/provideddocuments");
 }

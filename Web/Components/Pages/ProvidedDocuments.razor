@@ -1,0 +1,163 @@
+@page "/provideddocuments"
+@using Application.Services.ProvidedDocuments
+@using Application.DTO
+@using MudBlazor
+@inject IProvidedDocumentService ProvidedDocumentService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@using PDEntity = Domain.Entities.ProvidedDocument
+
+<PageTitle>Provided Document List</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <MudText Typo="Typo.h4" Class="mb-4">Provided Document List</MudText>
+
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add"
+               OnClick="@(() => OpenCreateDialog())">
+        Add Provided Document
+    </MudButton>
+
+    <MudDataGrid T="ProvidedDocumentDTO"
+                 Items="providedDocuments"
+                 Hover="true"
+                 Striped="true"
+                 Dense="true"
+                 FilterMode="DataGridFilterMode.ColumnFilterRow"
+                 Loading="@loading"
+                 LoadingProgressColor="Color.Info"
+                 Class="mt-4">
+        <Columns>
+            <PropertyColumn Property="x => x.DocumentName" Title="Document Name" Sortable="true" Filterable="true" />
+            <TemplateColumn Title="Files" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudText Typo="Typo.body2">@context.Item.DocumentFiles.Count file(s)</MudText>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Actions" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudButtonGroup Variant="Variant.Text" Size="Size.Small">
+                        <MudButton Color="Color.Primary"
+                                   Variant="Variant.Text"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Visibility"
+                                   OnClick="@(() => ViewProvidedDocument(context.Item))">
+                            View
+                        </MudButton>
+                        <MudButton Color="Color.Secondary"
+                                   Variant="Variant.Text"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Edit"
+                                   OnClick="@(() => OpenEditDialog(context.Item))">
+                            Edit
+                        </MudButton>
+                    </MudButtonGroup>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent>
+            <MudDataGridPager T="ProvidedDocumentDTO" />
+        </PagerContent>
+    </MudDataGrid>
+</MudContainer>
+
+@code {
+    private List<ProvidedDocumentDTO> providedDocuments = new();
+    private bool loading = false;
+
+    protected override void OnInitialized()
+    {
+        LoadProvidedDocuments();
+    }
+
+    private void LoadProvidedDocuments()
+    {
+        loading = true;
+        try
+        {
+            providedDocuments = ProvidedDocumentService.GetAllProvidedDocuments(new FilterProvidedDocumentDTO());
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            ["IsCreate"] = true,
+            ["CreateModel"] = new CreateProvidedDocumentDTO()
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<ProvidedDocumentDialog>("Create Provided Document", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled && result.Data is CreateProvidedDocumentDTO createDto)
+        {
+            try
+            {
+                await ProvidedDocumentService.CreateProvidedDocumentAsync(createDto);
+                Snackbar.Add("Document created successfully", Severity.Success);
+                LoadProvidedDocuments();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error creating document: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task OpenEditDialog(ProvidedDocumentDTO providedDocument)
+    {
+        var updateDto = new UpdateProvidedDocumentDTO
+        {
+            DocumentName = providedDocument.DocumentName
+        };
+
+        var parameters = new DialogParameters
+        {
+            ["IsCreate"] = false,
+            ["UpdateModel"] = updateDto
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<ProvidedDocumentDialog>("Edit Provided Document", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled && result.Data is UpdateProvidedDocumentDTO updateModel)
+        {
+            try
+            {
+                await ProvidedDocumentService.UpdateProvidedDocumentAsync(providedDocument.Id, updateModel);
+                Snackbar.Add("Document updated successfully", Severity.Success);
+                LoadProvidedDocuments();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error updating document: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private void ViewProvidedDocument(ProvidedDocumentDTO providedDocument)
+    {
+        Navigation.NavigateTo($"/provideddocuments/{providedDocument.Id}");
+    }
+}

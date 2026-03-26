@@ -33,8 +33,8 @@
     <RowTemplate>
         <MudTd DataLabel="NIDA">@context.IdentificationNumber</MudTd>
         <MudTd DataLabel="Full Name">@context.FirstName @context.LastName</MudTd>
-        <MudTd DataLabel="District">@context.HomeLocation?.District</MudTd>
-        <MudTd DataLabel="Sector">@context.HomeLocation?.Sector</MudTd>
+       <MudTd DataLabel="District">@context.District</MudTd>
+       <MudTd DataLabel="Sector">@context.Sector</MudTd>
         <MudTd DataLabel="Status">
             <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Error)" Size="Size.Small">
                 @(context.IsActive ? "Active" : "Inactive")
