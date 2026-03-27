@@ -1,0 +1,98 @@
+@using Application.DTO
+@using Application.Interfaces
+@inject ILoanApplicationService LoanService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Assignment" Class="mr-3"/>
+            New Loan Application
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudSelect T="int" Label="Loan Product" @bind-Value="Model.ProductId" Required="true" AnchorOrigin="Origin.BottomCenter">
+                        @foreach (var product in Products)
+                        {
+                            <MudSelectItem Value="@product.Id">@product.ProductName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudSelect T="int" Label="Payment Modality" @bind-Value="Model.ModalityId" Required="true" AnchorOrigin="Origin.BottomCenter">
+                        @foreach (var modality in Modalities)
+                        {
+                            <MudSelectItem Value="@modality.Id">@modality.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                
+                <MudItem xs="12" md="6">
+                    <MudNumericField T="decimal" Label="Requested Amount" @bind-Value="Model.RequestedAmount" 
+                                    Format="N2" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.AttachMoney" HideSpinButtons="true" />
+                </MudItem>
+                
+                <MudItem xs="12" md="6">
+                    <MudNumericField T="int" Label="Loan Term (Months)" @bind-Value="Model.LoanTerm" Required="true" Min="1" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Purpose of Loan" @bind-Value="Model.Purpose" 
+                                  Lines="3" Variant="Variant.Outlined" Required="true" 
+                                  Placeholder="Explain why the borrower needs this loan..." />
+                </MudItem>
+
+                @if (Model.Id != 0) // Only show Status if editing
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Info">Current Status: @Model.Status</MudAlert>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!success)">Create Application</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    
+    [Parameter] public LoanApplicationDTO Model { get; set; } = new();
+    
+    [Parameter] public List<LoanProductDTO> Products { get; set; } = new();
+
+    // Added to match your DTO's ModalityId
+    [Parameter] public List<PaymentModalityDTO> Modalities { get; set; } = new();
+
+    bool success;
+    MudForm form;
+
+    private async Task Submit()
+    {
+        await form.Validate();
+        if (form.IsValid)
+        {
+            // The Service generates the ApplicationNumber and Date automatically
+            var result = await LoanService.CreateApplicationAsync(Model);
+            
+            if (result != null)
+            {
+                Snackbar.Add($"Application {result.ApplicationNumber} Created Successfully", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("Failed to create application. Please check your inputs.", Severity.Error);
+            }
+        }
+    }
+
+    void Cancel() => MudDialog.Cancel();
+}

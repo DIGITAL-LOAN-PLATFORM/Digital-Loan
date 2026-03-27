@@ -1,0 +1,76 @@
+@page "/payment-types"
+@using Application.Interface
+@using Domain.Entities
+@using MudBlazor
+@inject IPaymentTypeService PaymentTypeService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Payment Types</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">Payment Types</MudText>
+
+<MudTable Items="@_paymentTypes" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Elevation="2">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Payment Types</MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add">
+            Add Payment Type
+        </MudButton>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>ID</MudTh>
+        <MudTh>Name</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="ID">@context.Id</MudTd>
+        <MudTd DataLabel="Name">@context.Name</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" OnClick="@(() => OpenUpdateDialog(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeletePaymentType(context.Id))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<PaymentType> _paymentTypes = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadPaymentTypes();
+
+    private async Task LoadPaymentTypes()
+    {
+        _loading = true;
+        try { _paymentTypes = await PaymentTypeService.GetAllPaymentTypesAsync(); }
+        finally { _loading = false; }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var parameters = new DialogParameters { ["PaymentTypeId"] = 0 };
+        var dialog = await DialogService.ShowAsync<PaymentTypeDialog>("Add Payment Type", parameters, options);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadPaymentTypes();
+    }
+
+    private async Task OpenUpdateDialog(PaymentType paymentType)
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var parameters = new DialogParameters { ["PaymentTypeId"] = paymentType.Id };
+        var dialog = await DialogService.ShowAsync<PaymentTypeDialog>("Update Payment Type", parameters, options);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadPaymentTypes();
+    }
+
+    private async Task DeletePaymentType(int id)
+    {
+        try
+        {
+            await PaymentTypeService.DeletePaymentTypeAsync(id);
+            Snackbar.Add("Payment type deleted", Severity.Success);
+            await LoadPaymentTypes();
+        }
+        catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    }
+}

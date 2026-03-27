@@ -1,0 +1,67 @@
+@using Application.DTO
+@using Application.Interface
+@using Domain.Entities
+@using MudBlazor
+
+@inject ISnackbar Snackbar
+@inject IPaymentTypeService PaymentTypeService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@(PaymentTypeId == 0 ? Icons.Material.Filled.Add : Icons.Material.Filled.Edit)" Class="mr-2 mb-1"/>
+            @(PaymentTypeId == 0 ? "Add Payment Type" : "Update Payment Type")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Name" Required="true" @bind-Value="_model.Name" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Disabled="@_processing">
+            @(_processing ? "Processing..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public int PaymentTypeId { get; set; } = 0;
+
+    private MudForm? form;
+    private bool _processing = false;
+    private CreatePaymentTypeDTO _model = new();
+
+    private async Task Submit()
+    {
+        if (form == null) return;
+        await form.ValidateAsync();
+        if (!form.IsValid) return;
+
+        _processing = true;
+        try
+        {
+            if (PaymentTypeId == 0)
+            {
+                await PaymentTypeService.CreatePaymentTypeAsync(new CreatePaymentTypeDTO { Name = _model.Name });
+                Snackbar.Add("Payment type created successfully", Severity.Success);
+            }
+            else
+            {
+                await PaymentTypeService.UpdatePaymentTypeAsync(PaymentTypeId, new UpdatePaymentTypeDTO { Name = _model.Name });
+                Snackbar.Add("Payment type updated successfully", Severity.Success);
+            }
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        finally { _processing = false; }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

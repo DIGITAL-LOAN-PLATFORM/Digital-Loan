@@ -1,0 +1,74 @@
+@page "/guarantortype"
+
+@using Application.Services
+@using Domain.Entities
+
+@inject IGuarantorTypeService GuarantorTypeService
+@inject IDialogService DialogService
+
+
+<PageTitle>GuarantorType</PageTitle>
+<MudPaper Class="pa-4">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(()=>OpenDialog())">Add GuarantorType</MudButton>
+    </div>
+
+    <MudDataGrid Items="@guarantortypes" Hoverable="true" Striped="true" Bordered="true" Class="mud-elevation-1">
+        <Columns>
+            <PropertyColumn Property="x => x.Id" Title="Id" />
+            <PropertyColumn Property="x => x.Name" Title="Name" />
+          
+            <TemplateColumn Title="Actions" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudButton Href="@($"/GuarantorTypes/{context.Item.Id}")" 
+                               Variant="Variant.Filled" 
+                               Color="Color.Info"
+                               Size="Size.Small"
+                               Class="mx-1">
+                        View Details
+                    </MudButton>
+                    <MudButton Href="@($"/GuarantorTypes/edit/{context.Item.Id}")" 
+                               Variant="Variant.Filled" 
+                               Color="Color.Warning" 
+                               StartIcon="@Icons.Material.Filled.Edit"
+                               Size="Size.Small"
+                               Class="mx-1">
+                        Edit
+                    </MudButton>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+    </MudDataGrid>
+     </MudPaper>
+
+
+
+@code 
+{
+    bool disabled = false;
+    List<GuarantorType> guarantortypes = new List<GuarantorType>();
+
+    
+    protected override async Task OnInitializedAsync()
+    {
+        
+        guarantortypes = await GuarantorTypeService.GetAllGuarantorTypeAsync();
+    }
+
+    private async Task OpenDialog(GuarantorType? guarantortype = null)
+    {
+        var dialog = await DialogService.ShowAsync<GuarantorTypeDialog>("Add GuarantorType");
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled)
+        {
+            
+            guarantortypes = await GuarantorTypeService.GetAllGuarantorTypeAsync();
+            
+            
+            StateHasChanged();
+        }
+    }
+}
+    

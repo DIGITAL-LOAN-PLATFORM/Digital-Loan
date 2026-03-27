@@ -1,0 +1,85 @@
+@page "/borrowers"
+@using Application.Services
+@using Domain.Entities
+@using Application.Interface
+@using MudBlazor
+@inject IBorrowerService BorrowerService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Borrower Management</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Borrowers (System of Record)</MudText>
+
+<MudTable Items="@_borrowers" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Elevation="2">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Registered Members</MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   OnClick="OpenCreateDialog" 
+                   StartIcon="@Icons.Material.Filled.Add">
+            Register New Borrower
+        </MudButton>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>NIDA (ID)</MudTh>
+        <MudTh>Full Name</MudTh>
+        <MudTh>District</MudTh>
+        <MudTh>Sector</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="NIDA">@context.IdentificationNumber</MudTd>
+        <MudTd DataLabel="Full Name">@context.FirstName @context.LastName</MudTd>
+        <MudTd DataLabel="District">@context.HomeLocation?.District</MudTd>
+        <MudTd DataLabel="Sector">@context.HomeLocation?.Sector</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Error)" Size="Size.Small">
+                @(context.IsActive ? "Active" : "Inactive")
+            </MudChip>
+        </MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" OnClick="@(() => OpenUpdateDialog(context))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<Borrower> _borrowers = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadBorrowers();
+
+    private async Task LoadBorrowers()
+    {
+        _loading = true;
+        try {
+            _borrowers = await BorrowerService.GetAllBorrowersAsync();
+        }
+        finally {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        var parameters = new DialogParameters { ["BorrowerId"] = 0 };
+        var dialog = await DialogService.ShowAsync<BorrowerDialog>("Register New Borrower", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled) await LoadBorrowers();
+    }
+
+    private async Task OpenUpdateDialog(Borrower borrower)
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        var parameters = new DialogParameters { ["BorrowerId"] = borrower.Id };
+        var dialog = await DialogService.ShowAsync<BorrowerDialog>("Update Borrower Profile", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled) await LoadBorrowers();
+    }
+}
