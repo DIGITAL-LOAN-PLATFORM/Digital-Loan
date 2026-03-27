@@ -1,11 +1,13 @@
 using Domain.Entities;
 using Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Infrastructure.Identity;
 
 namespace Infrastructure.Data
 {
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<int>, int>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
@@ -19,7 +21,6 @@ namespace Infrastructure.Data
         public DbSet<LoanApplication> LoanApplications { get; set; }
         public DbSet<LoanDisbursement> LoanDisbursements { get; set; }
         public DbSet<LoanProduct> LoanProducts { get; set; }
-        public DbSet<LoanRecquirements> LoanRecquirementses { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<PaymentModality> PaymentModalities { get; set; }
         public DbSet<Penalty> Penalties { get; set; }
@@ -27,15 +28,14 @@ namespace Infrastructure.Data
         public DbSet<ProvidedDocument> ProvidedDocuments { get; set; }
         public DbSet<Reason> Reasons { get; set; }
         public DbSet<PaymentType> PaymentTypes { get; set; }
-        public DbSet<RequirementDocument> RequiredDocuments { get; set; }
+
+        // Note: DbSet<User> is inherited from IdentityDbContext. Do not redeclare it here.
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
             // 1. CONFIGURE OWNED TYPES (Value Objects)
-            // This maps the Location properties directly into the Parent table columns
-            
             modelBuilder.Entity<Borrower>().OwnsOne(b => b.HomeLocation, location =>
             {
                 location.Property(l => l.Province).HasColumnName("Province");
@@ -56,6 +56,11 @@ namespace Infrastructure.Data
 
             // 2. RELATIONSHIPS & CONSTRAINTS
             
+            // Unique Index for Borrower NIDA
+            modelBuilder.Entity<Borrower>()
+                .HasIndex(b => b.IdentificationNumber)
+                .IsUnique();
+
             // Link Guarantor to LoanApplication
             modelBuilder.Entity<Guarantor>()
                 .HasOne(g => g.LoanApplication)
@@ -70,20 +75,43 @@ namespace Infrastructure.Data
                 .HasForeignKey(g => g.GuarantorTypeId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Unique Index for Borrower NIDA
-            modelBuilder.Entity<Borrower>()
-                .HasIndex(b => b.IdentificationNumber)
-                .IsUnique();
+            // LoanApplication FKs
+            modelBuilder.Entity<LoanApplication>()
+                .HasOne(l => l.loanProduct)
+                .WithMany()
+                .HasForeignKey(l => l.loanProductId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // 3. THE GLOBAL FIX: Disable Cascade Delete
-            // Important: This must come AFTER specific relationship configs to avoid overriding them wrongly
+            modelBuilder.Entity<LoanApplication>()
+                .HasOne(l => l.paymentModality)
+                .WithMany()
+                .HasForeignKey(l => l.paymentModalityId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<LoanApplication>()
+                .HasOne(l => l.Borrower)
+                .WithMany() // Change this to .WithMany(b => b.LoanApplications) if Borrower has that list
+                .HasForeignKey(l => l.BorrowerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // 3. IDENTITY TABLE CUSTOMIZATION
+            modelBuilder.Entity<User>().ToTable("Users");
+            modelBuilder.Entity<IdentityRole<int>>().ToTable("Roles");
+            modelBuilder.Entity<IdentityUserClaim<int>>().ToTable("UserClaims");
+            modelBuilder.Entity<IdentityUserLogin<int>>().ToTable("UserLogins");
+            modelBuilder.Entity<IdentityRoleClaim<int>>().ToTable("RoleClaims");
+            modelBuilder.Entity<IdentityUserToken<int>>().ToTable("UserTokens");
+            modelBuilder.Entity<IdentityUserRole<int>>().ToTable("UserRoles");
+
+            // 4. THE GLOBAL FIX: Disable Cascade Delete (Safely)
+            // We loop through all relationships but skip "Owned" types (Value Objects)
             foreach (var relationship in modelBuilder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))
             {
-                relationship.DeleteBehavior = DeleteBehavior.Restrict;
+                if (!relationship.IsOwnership) 
+                {
+                    relationship.DeleteBehavior = DeleteBehavior.Restrict;
+                }
             }
-
-            // 4. SOFT-DELETE FILTER (If IsActive property exists on Borrower)
-            modelBuilder.Entity<Borrower>().HasQueryFilter(b => b.IsActive);
         }
     }
 }

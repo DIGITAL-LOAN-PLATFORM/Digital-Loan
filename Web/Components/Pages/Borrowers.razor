@@ -25,6 +25,10 @@
     <HeaderContent>
         <MudTh>NIDA (ID)</MudTh>
         <MudTh>Full Name</MudTh>
+         <MudTh>Email</MudTh>
+          <MudTh>PhoneNumber</MudTh>
+           <MudTh>Province</MudTh>
+        
         <MudTh>District</MudTh>
         <MudTh>Sector</MudTh>
         <MudTh>Status</MudTh>
@@ -33,6 +37,9 @@
     <RowTemplate>
         <MudTd DataLabel="NIDA">@context.IdentificationNumber</MudTd>
         <MudTd DataLabel="Full Name">@context.FirstName @context.LastName</MudTd>
+        <MudTd DataLabel="Email">@context.Email</MudTd>
+        <MudTd DataLabel="PhoneNumber">@context.PhoneNumber</MudTd>
+         <MudTd DataLabel="Province">@context.HomeLocation?.Province</MudTd>
         <MudTd DataLabel="District">@context.HomeLocation?.District</MudTd>
         <MudTd DataLabel="Sector">@context.HomeLocation?.Sector</MudTd>
         <MudTd DataLabel="Status">

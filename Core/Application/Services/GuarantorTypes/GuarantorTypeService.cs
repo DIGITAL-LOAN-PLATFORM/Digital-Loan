@@ -31,10 +31,10 @@ namespace Application.Services
             await _guarantortype.CreateGuarantorTypeAsync(guarantorTypeDto);
         }
 
-        public async Task UpdateGuarantorAsync(int id, UpdateGuarantorTypeDTO guarantorTypeDto)
+        public async Task UpdateGuarantorTypeAsync(int id, UpdateGuarantorTypeDTO guarantorTypeDto)
         {
             
-            var existing = await _guarantortype.GetByIdAsync(id);
+                var existing = await _guarantortype.GetByIdAsync(id);
             if (existing == null)
             {
                 
@@ -43,5 +43,5 @@ namespace Application.Services
 
             await _guarantortype.UpdateBorrowerAsync(id, guarantorTypeDto);
         }
-    }
+            }
 }

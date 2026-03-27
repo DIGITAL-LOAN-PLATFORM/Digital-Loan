@@ -1,0 +1,105 @@
+@page "/loans/disbursements"
+@using Application.DTO
+@using Application.Interfaces
+@inject ILoanDisbursementService DisbursementService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h4" Class="mb-4">Loan Disbursements</MudText>
+
+<MudTable Items="@Disbursements" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Elevation="2">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Disbursement History</MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Add" 
+                   OnClick="OpenDisburseDialog">
+            New Disbursement
+        </MudButton>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>App #</MudTh>
+        <MudTh>Borrower</MudTh>
+        <MudTh>Principal</MudTh>
+        <MudTh>Balance</MudTh>
+        <MudTh>Date</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="App #">@context.ApplicationNumber</MudTd>
+        <MudTd DataLabel="Borrower">@context.BorrowerName</MudTd>
+        <MudTd DataLabel="Principal">@context.PrincipalDisbursed.ToString("N0") RWF</MudTd>
+        <MudTd DataLabel="Balance">@context.CurrentPrincipalBalance.ToString("N0") RWF</MudTd>
+        <MudTd DataLabel="Date">@context.DisbursementDate.ToShortDateString()</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Color="@GetStatusColor(context.StatusName)" Size="Size.Small">@context.StatusName</MudChip>
+        </MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OpenUpdateDialog(context))" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>No disbursements found.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private IEnumerable<LoanDisbursementDTO> Disbursements = new List<LoanDisbursementDTO>();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        try 
+        {
+            Disbursements = await DisbursementService.GetAllDisbursementsAsync() ?? new List<LoanDisbursementDTO>();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+        }
+        finally 
+        {
+            _loading = false;
+        }
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Active" => Color.Success,
+        "Defaulted" => Color.Error,
+        "FullyPaid" => Color.Info,
+        _ => Color.Default
+    };
+
+    private async Task OpenDisburseDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<LoanDisbursementDialog>("Confirm Loan Disbursement", options);
+        var result = await dialog.Result;
+
+        if (!result!.Canceled) 
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task OpenUpdateDialog(LoanDisbursementDTO dto)
+    {
+        var parameters = new DialogParameters { ["Disbursement"] = dto };
+        var dialog = await DialogService.ShowAsync<LoanDisbursementDialog>("Update Disbursement Info", parameters);
+        var result = await dialog.Result;
+
+        if (!result!.Canceled) 
+        {
+            await LoadData();
+        }
+    }
+}

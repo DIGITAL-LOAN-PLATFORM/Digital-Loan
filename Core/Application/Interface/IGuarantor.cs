@@ -1,6 +1,6 @@
 using Domain.Entities;
 
-namespace Application.Interfaces
+namespace Application.Interface
 {
     public interface IGuarantor
     {
@@ -12,6 +12,9 @@ namespace Application.Interfaces
         // Get all guarantors for a specific Loan Application
         // This is crucial for your "Loan Details" page
         Task<IEnumerable<Guarantor>> GetByLoanApplicationIdAsync(int loanApplicationId);
+
+        // Get all guarantors (for admin listing)
+        Task<IEnumerable<Guarantor>> GetAllAsync();
 
         // Find a guarantor by their NIDA/ID Number (useful for blacklisting or duplicates)
         Task<Guarantor?> GetByIdentificationNumberAsync(string idNumber);

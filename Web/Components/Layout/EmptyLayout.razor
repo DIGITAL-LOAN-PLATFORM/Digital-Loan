@@ -1,0 +1,42 @@
+@inherits LayoutComponentBase
+
+
+@* Required *@
+<MudThemeProvider Theme="_theme" />
+<MudPopoverProvider />
+
+@* Needed for dialogs *@
+<MudDialogProvider />
+
+
+@* Needed for snackbars *@
+<MudSnackbarProvider />
+
+<MudLayout>
+     
+       
+    <MudContainer >
+        @Body
+    </MudContainer>
+</MudLayout>
+
+
+
+@code {
+
+
+    private MudTheme _theme = new(){
+        PaletteLight = new PaletteLight()
+        {
+            Primary = Colors.Blue.Default,
+            Secondary = Colors.Green.Accent4,
+            AppbarBackground = Colors.Blue.Default,
+        },
+        PaletteDark = new PaletteDark()
+        {
+            Primary = Colors.Blue.Lighten1
+        },
+    };
+
+    
+}

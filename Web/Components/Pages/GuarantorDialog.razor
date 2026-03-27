@@ -1,110 +1,295 @@
 @using Application.DTO
 @using Application.Interfaces
+@using MudBlazor
+@using Application.Services
+@using Domain.ValueObjects
+@using Domain.Entities
 @inject IGuarantorService GuarantorService
+@inject IGuarantorTypeService GuarantorTypeService
+@inject ILocationService LocationService
+@inject ILoanApplicationService LoanApplicationService
 @inject ISnackbar Snackbar
 
-<MudDialog>
+<MudDialog T="bool?">
     <TitleContent>
         <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-3"/>
-            @(Guarantor.Id == 0 ? "Add New Guarantor" : "Edit Guarantor")
+            <MudIcon Icon="@Icons.Material.Filled.Shield" Class="mr-3"/>
+            @(internalGuarantor.Id == 0 ? "Add New Guarantor" : "Update Guarantor")
         </MudText>
     </TitleContent>
     <DialogContent>
         <MudForm @ref="form" @bind-IsValid="@success">
             <MudGrid>
+                @* 1. Loan Application Selection *@
+                <MudItem xs="12">
+                    <MudSelect T="int" 
+                               Label="Loan Application" 
+                               @bind-Value="selectedLoanApplicationId" 
+                               Required="true" 
+                               RequiredError="Loan selection is required!"
+                               Disabled="@(internalGuarantor.Id != 0)"
+                               Variant="Variant.Outlined">
+                        @foreach (var app in LoanApplications)
+                        {
+                            <MudSelectItem Value="@app.Id">@app.ApplicationNumber (@app.BorrowerName)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                @* 2. Guarantor Type *@
+                <MudItem xs="12">
+                    <MudSelect T="int" 
+                               Label="Guarantor Type" 
+                               @bind-Value="selectedGuarantorTypeId" 
+                               Required="true" 
+                               RequiredError="Guarantor type is required!"
+                               Variant="Variant.Outlined">
+                        @foreach (var type in GuarantorTypes)
+                        {
+                            <MudSelectItem Value="@type.Id">@type.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                @* 3. Identity Information *@
                 <MudItem xs="12" md="6">
-                    <MudTextField T="string" Label="Full Name" @bind-Value="Guarantor.Name" Required="true" />
+                    <MudTextField T="string" Label="Full Name" @bind-Value="internalGuarantor.Name" Required="true" Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12" md="6">
-                    <MudTextField T="string" Label="NIDA / ID Number" @bind-Value="Guarantor.IdentificationNumber" Required="true" />
+                    <MudTextField T="string" Label="National ID (NIDA)" @bind-Value="internalGuarantor.IdentificationNumber" Required="true" Disabled="@(internalGuarantor.Id != 0)" Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12" md="6">
-                    <MudTextField T="string" Label="Phone Number" @bind-Value="Guarantor.Phone" Required="true" />
+                    <MudDatePicker Label="Date of Birth" @bind-Value="internalGuarantor.DOB" Required="true" Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12" md="6">
-                    <MudTextField T="string" Label="Email Address" @bind-Value="Guarantor.Email" />
+                    <MudTextField T="string" Label="Phone Number" @bind-Value="internalGuarantor.Phone" Required="true" Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12">
-                    <MudDivider Class="my-2"/>
-                    <MudText Typo="Typo.subtitle2">Residential Address</MudText>
+                    <MudTextField T="string" Label="Email Address" @bind-Value="internalGuarantor.Email" Variant="Variant.Outlined" />
                 </MudItem>
-                <MudItem xs="6" md="4">
-                    <MudTextField Label="Province" @bind-Value="Guarantor.ResidentialAddress.Province" />
+
+                @* 4. Residential Address *@
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mt-2">Residential Address (Rwanda)</MudText>
                 </MudItem>
-                <MudItem xs="6" md="4">
-                    <MudTextField Label="District" @bind-Value="Guarantor.ResidentialAddress.District" />
+
+                <MudItem xs="12" sm="4">
+                    <MudSelect T="string" Label="Province" Value="@internalGuarantor.ResidentialAddress.Province" ValueChanged="OnProvinceChanged" Required="true" Variant="Variant.Outlined">
+                        @foreach (var p in Provinces)
+                        {
+                            <MudSelectItem Value="@p">@p</MudSelectItem>
+                        }
+                    </MudSelect>
                 </MudItem>
-                <MudItem xs="6" md="4">
-                    <MudTextField Label="Sector" @bind-Value="Guarantor.ResidentialAddress.Sector" />
+
+                <MudItem xs="12" sm="4">
+                    <MudSelect T="string" Label="District" Value="@internalGuarantor.ResidentialAddress.District" ValueChanged="OnDistrictChanged" Disabled="@(!Districts.Any())" Required="true" Variant="Variant.Outlined">
+                        @foreach (var d in Districts)
+                        {
+                            <MudSelectItem Value="@d">@d</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="4">
+                    <MudSelect T="string" Label="Sector" Value="@internalGuarantor.ResidentialAddress.Sector" ValueChanged="OnSectorChanged" Disabled="@(!Sectors.Any())" Required="true" Variant="Variant.Outlined">
+                        @foreach (var s in Sectors)
+                        {
+                            <MudSelectItem Value="@s">@s</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Cell" Value="@internalGuarantor.ResidentialAddress.Cell" ValueChanged="OnCellChanged" Disabled="@(!Cells.Any())" Required="true" Variant="Variant.Outlined">
+                        @foreach (var c in Cells)
+                        {
+                            <MudSelectItem Value="@c">@c</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Village" Value="@internalGuarantor.ResidentialAddress.Village" ValueChanged="OnVillageChanged" Disabled="@(!Villages.Any())" Required="true" Variant="Variant.Outlined">
+                        @foreach (var v in Villages)
+                        {
+                            <MudSelectItem Value="@v">@v</MudSelectItem>
+                        }
+                    </MudSelect>
                 </MudItem>
             </MudGrid>
         </MudForm>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!success)">Save Guarantor</MudButton>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   OnClick="Submit" 
+                   Disabled="@_processing">
+            @(_processing ? "Saving..." : "Save Guarantor")
+        </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
-    [Parameter] public GuarantorDTO Guarantor { get; set; } = new();
-    [Parameter] public int LoanId { get; set; }
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public int? InitialLoanApplicationId { get; set; }
+    [Parameter] public GuarantorDTO? Guarantor { get; set; }
 
-    bool success;
-    MudForm form;
+    private GuarantorDTO internalGuarantor = new() { ResidentialAddress = new() };
+    private List<LoanApplicationDTO> LoanApplications = new();
+    private List<GuarantorTypeDTO> GuarantorTypes = new();
+    
+    private int selectedLoanApplicationId;
+    private int selectedGuarantorTypeId;
 
-    private async Task Submit()
+    private List<string> Provinces = new();
+    private List<string> Districts = new();
+    private List<string> Sectors = new();
+    private List<string> Cells = new();
+    private List<string> Villages = new();
+
+    private bool _processing = false;
+    private bool success;
+    private MudForm? form;
+
+    protected override async Task OnInitializedAsync()
     {
-        await form.Validate();
-        if (!form.IsValid) return;
+        // 1. Load basic lookups
+        Provinces = await LocationService.GetProvincesAsync() ?? new();
+        
+        var appsResult = await LoanApplicationService.GetAllApplicationsAsync();
+        if (appsResult != null) LoanApplications = appsResult.ToList();
 
-        bool result = false;
+        var typesResult = await GuarantorTypeService.GetAllGuarantorTypeAsync();
+        if (typesResult != null) 
+            GuarantorTypes = typesResult.Select(t => new GuarantorTypeDTO { Id = t.Id, Name = t.Name }).ToList();
 
-        if (Guarantor.Id == 0)
+        // 2. Set Initial State
+        if (Guarantor != null)
         {
-            // Map to CreateGuarantorDTO
-            var createDto = new CreateGuarantorDTO
-            {
-                IdentificationNumber = Guarantor.IdentificationNumber,
-                Name = Guarantor.Name,
-                DOB = Guarantor.DOB,
-                Email = Guarantor.Email,
-                Phone = Guarantor.Phone,
-                ResidentialAddress = Guarantor.ResidentialAddress,
-                LoanApplicationId = LoanId,
-                GuarantorTypeId = Guarantor.GuarantorTypeId
-            };
-            result = await GuarantorService.AddGuarantorAsync(createDto);
-        }
-        else
-        {
-            // Map to UpdateGuarantorDTO
-            var updateDto = new UpdateGuarantorDTO
-            {
-                Name = Guarantor.Name,
-                DOB = Guarantor.DOB,
-                Email = Guarantor.Email,
-                Phone = Guarantor.Phone,
-                ResidentialAddress = Guarantor.ResidentialAddress,
-                LoanApplicationId = Guarantor.LoanApplicationId,
-                GuarantorTypeId = Guarantor.GuarantorTypeId
-            };
-            // Note: Pass Id separately as required by your service interface
-            result = await GuarantorService.UpdateGuarantorAsync(Guarantor.Id, updateDto);
-        }
+            internalGuarantor = Guarantor;
+            if (internalGuarantor.ResidentialAddress == null) internalGuarantor.ResidentialAddress = new();
+                
+            selectedLoanApplicationId = internalGuarantor.LoanApplicationId;
+            selectedGuarantorTypeId = internalGuarantor.GuarantorTypeId;
 
-        if (result)
-        {
-            Snackbar.Add("Guarantor saved successfully", Severity.Success);
-            MudDialog.Close(DialogResult.Ok(true));
+            // Pre-load location dropdowns based on existing data
+            if (!string.IsNullOrEmpty(internalGuarantor.ResidentialAddress.Province))
+                Districts = await LocationService.GetDistrictsAsync(internalGuarantor.ResidentialAddress.Province) ?? new();
+            if (!string.IsNullOrEmpty(internalGuarantor.ResidentialAddress.District))
+                Sectors = await LocationService.GetSectorsAsync(internalGuarantor.ResidentialAddress.District) ?? new();
+             if (!string.IsNullOrEmpty(internalGuarantor.ResidentialAddress.Sector))
+                Cells = await LocationService.GetCellsAsync(internalGuarantor.ResidentialAddress.Sector) ?? new();
+             if (!string.IsNullOrEmpty(internalGuarantor.ResidentialAddress.Cell))
+                Villages = await LocationService.GetVillagesAsync(internalGuarantor.ResidentialAddress.Cell) ?? new();
         }
-        else
+        else if (InitialLoanApplicationId.HasValue)
         {
-            Snackbar.Add("Error saving guarantor. Check for duplicate NIDA or Loan Status.", Severity.Error);
+            selectedLoanApplicationId = InitialLoanApplicationId.Value;
         }
     }
 
-    void Cancel() => MudDialog.Cancel();
+    private async Task OnProvinceChanged(string province)
+    {
+        internalGuarantor.ResidentialAddress.Province = province;
+        Districts = await LocationService.GetDistrictsAsync(province);
+        internalGuarantor.ResidentialAddress.District = "";
+        internalGuarantor.ResidentialAddress.Sector = "";
+        Sectors.Clear(); Cells.Clear(); Villages.Clear();
+    }
+
+    private async Task OnDistrictChanged(string district)
+    {
+        internalGuarantor.ResidentialAddress.District = district;
+        Sectors = await LocationService.GetSectorsAsync(district);
+        internalGuarantor.ResidentialAddress.Sector = "";
+        Cells.Clear(); Villages.Clear();
+    }
+
+    private async Task OnSectorChanged(string sector)
+    {
+        internalGuarantor.ResidentialAddress.Sector = sector;
+        Cells = await LocationService.GetCellsAsync(sector);
+        internalGuarantor.ResidentialAddress.Cell = "";
+        Villages.Clear();
+    }
+
+    private async Task OnCellChanged(string cell)
+    {
+        internalGuarantor.ResidentialAddress.Cell = cell;
+        Villages = await LocationService.GetVillagesAsync(cell) ?? new();
+    }
+
+    private void OnVillageChanged(string village) => internalGuarantor.ResidentialAddress.Village = village;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        if (form == null) return;
+        await form.ValidateAsync();
+        if (!form.IsValid) return;
+
+        _processing = true;
+        try
+        {
+            if (internalGuarantor.Id == 0)
+            {
+                var createDto = new CreateGuarantorDTO
+                {
+                    Name = internalGuarantor.Name,
+                    IdentificationNumber = internalGuarantor.IdentificationNumber,
+                    Phone = internalGuarantor.Phone,
+                    Email = internalGuarantor.Email,
+                    DOB = internalGuarantor.DOB,
+                    LoanApplicationId = selectedLoanApplicationId,
+                    GuarantorTypeId = selectedGuarantorTypeId,
+                    ResidentialAddress = internalGuarantor.ResidentialAddress
+                };
+
+                var result = await GuarantorService.AddGuarantorAsync(createDto);
+                if (result.IsSuccess)
+                {
+                    Snackbar.Add("Guarantor added successfully", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    // Changed .ErrorMessage to .Error to match Result pattern
+                    Snackbar.Add(result.Error, Severity.Error);
+                }
+            }
+            else
+            {
+                var updateDto = new UpdateGuarantorDTO
+                {
+                    Name = internalGuarantor.Name,
+                    Phone = internalGuarantor.Phone,
+                    Email = internalGuarantor.Email,
+                    DOB = internalGuarantor.DOB,
+                    GuarantorTypeId = selectedGuarantorTypeId,
+                    ResidentialAddress = internalGuarantor.ResidentialAddress
+                };
+
+                var result = await GuarantorService.UpdateGuarantorAsync(internalGuarantor.Id, updateDto);
+                if (result.IsSuccess)
+                {
+                    Snackbar.Add("Guarantor updated successfully", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    // Changed .ErrorMessage to .Error to match Result pattern
+                    Snackbar.Add(result.Error, Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"An error occurred: {ex.Message}", Severity.Error);
+        }
+        finally { _processing = false; }
+    }
 }

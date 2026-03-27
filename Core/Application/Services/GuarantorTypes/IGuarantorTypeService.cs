@@ -8,7 +8,7 @@ namespace Application.Services
          Task<List<GuarantorType>> GetAllGuarantorTypeAsync();
         Task<GuarantorType?> GetByIdAsync(int id);
         Task CreateGuarantorTypeAsync(CreateGuarantorTypeDTO guarantorTypeDto);
-        Task UpdateGuarantorAsync(int id, UpdateGuarantorTypeDTO guarantorTypeDto);
+        Task UpdateGuarantorTypeAsync(int id, UpdateGuarantorTypeDTO guarantorTypeDto);
     }
 
    

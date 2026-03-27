@@ -4,6 +4,8 @@
 @inject ILoanApplicationService LoanService
 @inject IDialogService DialogService
 @inject NavigationManager NavManager
+@inject ILoanProductService ProductService 
+@inject IPaymentModalityService ModalityService
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
     <MudPaper Elevation="25" Class="pa-4">
@@ -58,8 +60,14 @@
     private async Task LoadData()
     {
         _loading = true;
-        Applications = await LoanService.GetAllApplicationsAsync();
-        _loading = false;
+        try
+        {
+            Applications = await LoanService.GetAllApplicationsAsync();
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private Color GetStatusColor(string status) => status switch
@@ -72,19 +80,51 @@
 
     private void ViewDetails(int id)
     {
-        // Navigate to a details page where you can manage Guarantors and Documents
         NavManager.NavigateTo($"/loans/details/{id}");
     }
 
     private async Task OpenCreateDialog()
     {
-        // Assuming you have a way to pick a borrower first or pass a default
-        var parameters = new DialogParameters { ["Model"] = new LoanApplicationDTO { BorrowerId = 1 } };
-        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        // 1. Fetch the actual data from your services
+        var productsEntity = await ProductService.GetAllLoanProductsAsync();
+        var modalitiesEntity = await ModalityService.GetAllPaymentModalitiesAsync(); 
+
+        // 2. Map to DTOs for the Dialog parameters
+        var productsDto = productsEntity.Select(x => new LoanProductDTO 
+        { 
+            Id = x.Id, 
+            ProductName = x.ProductName 
+        }).ToList();
+
+        var modalitiesDto = modalitiesEntity.Select(x => new PaymentModalityDTO 
+        { 
+            Id = x.Id, 
+            Name = x.Modality // Based on your service naming convention
+        }).ToList();
+
+        // 3. Prepare the Model
+        // Note: You might want to pass a real BorrowerId/Name here from a selection or context
+        var newModel = new LoanApplicationDTO 
+        { 
+            DateOfApplication = DateTime.Now,
+            Status = "Pending"
+        };
+
+        var parameters = new DialogParameters 
+        { 
+            ["Model"] = newModel,
+            ["Products"] = productsDto,
+            ["Modalities"] = modalitiesDto
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
         
-        var dialog = await DialogService.ShowAsync<LoanApplicationDialog>("Create Loan", parameters, options);
+        var dialog = await DialogService.ShowAsync<LoanApplicationDialog>("Create Loan Application", parameters, options);
         var result = await dialog.Result;
         
-        if (!result.Canceled) await LoadData();
+        if (!result.Canceled) 
+        {
+            await LoadData();
+        }
     }
 }

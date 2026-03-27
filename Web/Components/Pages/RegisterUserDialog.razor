@@ -1,0 +1,83 @@
+@using  Application.DTO
+@using System.ComponentModel.DataAnnotations
+@using Application.Service
+@using Domain.Entities
+@using Application.Services
+@using MudBlazor
+@using MudBlazor.Services
+@using Microsoft.AspNetCore.Components
+@using Microsoft.EntityFrameworkCore.Metadata.Internal
+@using Domain.ValueObjects
+@inject NavigationManager Navigation
+@inject IIdentityService IdentityService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+
+<MudDialog>
+<DialogContent>
+    <EditForm Model="Model" OnValidSubmit="onValidSubmit">
+        <DataAnnotationsValidator />
+        <MudGrid>
+            <MudItem xs="12">
+                <MudTextField Label="FirstName" @bind-Value="Model.FirstName" For="@(() => Model.FirstName)" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField Label="LastName" @bind-Value="Model.LastName" For="@(() => Model.LastName)" />
+            </MudItem>
+             <MudItem xs="12">
+                <MudTextField Label="Email" @bind-Value="Model.Email" For="@(() => Model.Email)" />
+            </MudItem>
+              <MudItem xs="12">
+                <MudTextField Label="PhoneNumber" @bind-Value="Model.PhoneNumber" For="@(() => Model.PhoneNumber)" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField Label="UserName" @bind-Value="Model.UserName" For="@(() => Model.UserName)" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField Label="Password" @bind-Value="Model.Password" For="@(() => Model.Password)" />
+            </MudItem>
+            
+               <MudItem xs="12">
+                    <MudSelect T="string" Label="Role" @bind-Value="Model.Role" For="@(() => Model.Role)" AnchorOrigin="Origin.BottomCenter">
+                        <MudSelectItem Value="@("Admin")">Admin</MudSelectItem>
+                        <MudSelectItem Value="@("Receptionist")">Receptionist</MudSelectItem>
+                        <MudSelectItem Value="@("Manager")">Manager</MudSelectItem>
+                    </MudSelect>
+              </MudItem>
+           
+            
+            
+            <MudItem xs="12" class="d-flex justify-content-end">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit">Register User</MudButton>
+            </MudItem>
+             
+            
+        </MudGrid>
+
+    </EditForm>
+</DialogContent>
+</MudDialog>
+
+@code{
+    [CascadingParameter] IMudDialogInstance DialogInstance { get; set; }
+
+    private RegisterUserDTO Model {get;set;} = new ();
+   
+
+    private async Task onValidSubmit()
+    {
+        try
+        {
+            await IdentityService.RegisterUser(Model);
+            Snackbar.Add("User created successfully!", Severity.Success);
+            Model = new RegisterUserDTO();
+            DialogInstance.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error creating user: {ex.Message}", Severity.Error);
+        }
+    }
+
+}

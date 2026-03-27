@@ -41,6 +41,18 @@
                     <MudTextField T="string" Label="Last Name" @bind-Value="borrowerModel.LastName" Required="true" />
                 </MudItem>
 
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Phone Number" @bind-Value="borrowerModel.PhoneNumber" 
+                            Required="true" Adornment="Adornment.Start" 
+                            AdornmentIcon="@Icons.Material.Filled.Phone" />
+               </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Email Address" @bind-Value="borrowerModel.Email" 
+                                InputType="InputType.Email" Adornment="Adornment.Start" 
+                                AdornmentIcon="@Icons.Material.Filled.Email" />
+             </MudItem>
+
                 <MudItem xs="12" sm="12">
                     <MudSelect T="string" Label="Marital Status" @bind-Value="borrowerModel.MaritalStatus" Required="true">
                         <MudSelectItem T="string" Value="@("Single")" />
@@ -282,6 +294,8 @@
                     IdentificationNumber = borrowerModel.IdentificationNumber,
                     FirstName = borrowerModel.FirstName,
                     LastName = borrowerModel.LastName,
+                    Email = borrowerModel.Email,            
+                    PhoneNumber = borrowerModel.PhoneNumber,
                     Gender = borrowerModel.Gender,
                     DOB = borrowerModel.DOB,
                     MaritalStatus = borrowerModel.MaritalStatus,

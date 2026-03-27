@@ -1,0 +1,113 @@
+@page "/loans/guarantors"
+
+@using Application.Services
+@using Application.DTO
+@using Domain.Entities
+@using MudBlazor
+
+@inject IGuarantorService GuarantorService
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+
+<PageTitle>Guarantors</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">Guarantors</MudText>
+
+<MudPaper Class="pa-4">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="()=>OpenDialog()">Add Guarantor</MudButton>
+    </div>
+
+    <MudDataGrid Items="@guarantors" Hoverable="true" Striped="true" Bordered="true" Class="mud-elevation-1">
+        <Columns>
+            <PropertyColumn Property="x => x.Id" Title="Id" />
+            <PropertyColumn Property="x => x.Name" Title="Name" />
+            <PropertyColumn Property="x => x.IdentificationNumber" Title="National ID" />
+            <PropertyColumn Property="x => x.Phone" Title="Phone" />
+            <TemplateColumn Title="Guarantor Type">
+                <CellTemplate>
+                    @(context.Item.GuarantorTypeName ?? "N/A")
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Loan Application">
+                <CellTemplate>
+                    @(context.Item.LoanApplicationId.ToString() ?? "N/A")
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Actions" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudButton Href="@($"/guarantors/{context.Item.Id}")" 
+                               Variant="Variant.Filled" 
+                               Color="Color.Info"
+                               Size="Size.Small"
+                               Class="mx-1">
+                        View Details
+                    </MudButton>
+                    <MudButton OnClick="()=>OpenEditDialog(context.Item)" 
+                               Variant="Variant.Filled" 
+                               Color="Color.Warning" 
+                               StartIcon="@Icons.Material.Filled.Edit"
+                               Size="Size.Small"
+                               Class="mx-1">
+                        Edit
+                    </MudButton>
+                    <MudButton OnClick="()=>DeleteGuarantor(context.Item.Id)" 
+                               Variant="Variant.Filled" 
+                               Color="Color.Error" 
+                               StartIcon="@Icons.Material.Filled.Delete"
+                               Size="Size.Small"
+                               Class="mx-1">
+                        Delete
+                    </MudButton>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+    </MudDataGrid>
+</MudPaper>
+
+@code {
+    bool disabled = false;
+    List<GuarantorDTO> guarantors = new List<GuarantorDTO>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        guarantors = (await GuarantorService.GetAllGuarantorsAsync()).ToList();
+    }
+
+    private async Task OpenDialog()
+    {
+        var parameters = new DialogParameters { ["InitialLoanApplicationId"] = 0 };
+        var dialog = await DialogService.ShowAsync<GuarantorDialog>("Add New Guarantor", parameters);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            guarantors = (await GuarantorService.GetAllGuarantorsAsync()).ToList();
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenEditDialog(GuarantorDTO guarantor)
+    {
+        var parameters = new DialogParameters { ["Guarantor"] = guarantor };
+        var dialog = await DialogService.ShowAsync<GuarantorDialog>("Edit Guarantor", parameters);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            guarantors = (await GuarantorService.GetAllGuarantorsAsync()).ToList();
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteGuarantor(int id)
+    {
+        bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this guarantor?");
+        if (confirmed)
+        {
+            await GuarantorService.DeleteGuarantorAsync(id);
+            Snackbar.Add("Guarantor deleted successfully", Severity.Success);
+            guarantors = (await GuarantorService.GetAllGuarantorsAsync()).ToList();
+        }
+    }
+}

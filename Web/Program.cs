@@ -1,17 +1,19 @@
-using MudBlazor.Services;
-using Infrastructure.DependencyInjection;
+using Application.Interface;
+using Application.Interfaces;
+using Application.Service;
+using Application.Services;
+using Application.Services.Borrowers;
+
+using Application.Services.LoanApplications;
+
+using Application.Services.Locations;
 
 using Infrastructure.Data;
+using Infrastructure.DependencyInjection;
+using Infrastructure.Identity;
 using Microsoft.EntityFrameworkCore;
-using Domain.Entities;
-using Application.Services;
-using Application.Interface;
-using Application.Services.Locations;
-using Application.Services.Borrowers;
-using System;
-using System.IO;
-using System.Text.Json;
-using Application.Interfaces;
+using MudBlazor.Services;
+using Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,24 +30,19 @@ builder.Services.AddRazorComponents()
 
     builder.Services.AddControllers();
 
-    builder.Services.AddScoped<IBorrowerService, BorrowerService>();
-    builder.Services.AddScoped<IGuarantorTypeService, GuarantorTypeService>();
-    builder.Services.AddScoped<IPaymentModalityService, PaymentModalityService>();
-    builder.Services.AddScoped<ILoanProductService, LoanProductService>();
-    builder.Services.AddScoped<IGuarantorService, GuarantorService>();
-    builder.Services.AddScoped<ILoanApplicationService, LoanApplicationService>();
-    
-    // LocationService registered using factory - resolves namespace issue
-    // LocationService now properly registered via ServiceContainer
-    
-    // ILocationService registered - file loader, no deps
+// Application layer services
+builder.Services.AddScoped<IBorrowerService, BorrowerService>();
+builder.Services.AddScoped<IGuarantorService, GuarantorService>();
+builder.Services.AddScoped<IGuarantorTypeService, GuarantorTypeService>();
+builder.Services.AddScoped<IPaymentModalityService, PaymentModalityService>();
+builder.Services.AddScoped<ILoanProductService, LoanProductService>();
+builder.Services.AddScoped<ILoanApplicationService, LoanApplicationService>();
+builder.Services.AddScoped<ILocationService, LocationService>();
+builder.Services.AddScoped<ILoanDisbursementService, LoanDisbursementService>();
+builder.Services.AddScoped<IIdentityService, IdentityService>();
 
-// Dependency Injection for infrastructure Layer
+// / Depedency Injection for infrastructure Layer
 builder.Services.AddInfrastructureServices(builder.Configuration);
-
-// LOCATION SERVICE TEST DISABLED for clean startup
-Console.WriteLine("=== LOCATION TEST DISABLED - Startup fixed ===");
-Console.WriteLine("Test LocationService via Borrowers page after startup.\\n");
 
 // Add authorization
 builder.Services.AddAuthorization();
@@ -78,9 +75,10 @@ app.UseAuthorization();
 
 app.UseAntiforgery();
 app.MapControllers(); // Acount Login/logout end point
-app.UseStaticFiles();  // For wwwroot assets
-app.MapRazorComponents<Web.Components.App>()
+app.MapStaticAssets();  // For wwwroot assets
+app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.Run();
 
+
+app.Run();

@@ -1,0 +1,207 @@
+@using Application.DTO
+@using Application.Interfaces
+@using MudBlazor
+@using Domain.ValueObjects
+@using Domain.Entities
+@inject ILoanDisbursementService DisbursementService
+@inject ILoanApplicationService LoanApplicationService
+@inject IPaymentModalityService PaymentModalityService
+@inject ISnackbar Snackbar
+
+<MudDialog T="bool?">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Payments" Class="mr-3 mb-n1"/>
+            @(internalDisbursement.Id == 0 ? "Disburse New Loan" : "Update Disbursement Details")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudGrid>
+                @* 1. Loan Application Selection (Disabled if Editing) *@
+                <MudItem xs="12">
+                    <MudSelect T="int" 
+                               Label="Approved Application" 
+                               @bind-Value="selectedLoanApplicationId" 
+                               Required="true" 
+                               RequiredError="Application selection is required!"
+                               Disabled="@(internalDisbursement.Id != 0)"
+                               Variant="Variant.Outlined">
+                        @foreach (var app in ApprovedApplications)
+                        {
+                            <MudSelectItem Value="@app.Id">@app.ApplicationNumber - @app.BorrowerName (@app.ProductName)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                @* 2. Financial Details *@
+                <MudItem xs="12" md="6">
+                    <MudNumericField Label="Principal Amount" 
+                                     @bind-Value="internalDisbursement.PrincipalDisbursed" 
+                                     Format="N0" 
+                                     Required="true" 
+                                     Variant="Variant.Outlined" 
+                                     AdornmentText="RWF" 
+                                     Adornment="Adornment.End" 
+                                     Disabled="@(internalDisbursement.Id != 0)" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudNumericField Label="Interest Rate (%)" 
+                                     @bind-Value="internalDisbursement.InterestRate" 
+                                     Required="true" 
+                                     Variant="Variant.Outlined" 
+                                     Step=".5M" 
+                                     Disabled="@(internalDisbursement.Id != 0)" />
+                </MudItem>
+
+                @* 3. Payment Mode  *@
+                <MudItem xs="12" md="6">
+                    <MudSelect T="string" 
+                               Label="Payment Mode" 
+                               @bind-Value="internalDisbursement.PaymentMode" 
+                               Required="true" 
+                               Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("Mobile Money")">Mobile Money</MudSelectItem>
+                        <MudSelectItem Value="@("Bank Transfer")">Bank Transfer</MudSelectItem>
+                        <MudSelectItem Value="@("Cheque")">Cheque</MudSelectItem>
+                        <MudSelectItem Value="@("Cash")">Cash</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudTextField Label="Reference Number (TxID)" 
+                                 @bind-Value="internalDisbursement.ReferenceNumber" 
+                                 Required="true" 
+                                 Variant="Variant.Outlined" />
+                </MudItem>
+
+                @* 4. Dates *@
+                <MudItem xs="12" md="6">
+                    <MudDatePicker Label="Disbursement Date" 
+                                   @bind-Value="internalDisbursement.DisbursementDate" 
+                                   Required="true" 
+                                   Variant="Variant.Outlined" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudDatePicker Label="Maturity Date" 
+                                   @bind-Value="internalDisbursement.MaturityDate" 
+                                   Required="true" 
+                                   Variant="Variant.Outlined" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   OnClick="Submit" 
+                   Disabled="@_processing">
+            @(_processing ? "Processing..." : (internalDisbursement.Id == 0 ? "Confirm Disbursement" : "Update Details"))
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public int? InitialLoanApplicationId { get; set; }
+    [Parameter] public LoanDisbursementDTO? Disbursement { get; set; }
+
+    private LoanDisbursementDTO internalDisbursement = new() 
+    { 
+        DisbursementDate = DateTime.Today,
+        MaturityDate = DateTime.Today.AddMonths(12)
+    };
+    
+    private List<LoanApplicationDTO> ApprovedApplications = new();
+    private int selectedLoanApplicationId;
+    private bool _processing = false;
+    private bool success;
+    private MudForm? form;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. Load Approved Applications
+        var appsResult = await LoanApplicationService.GetAllApplicationsAsync();
+        if (appsResult != null)
+            ApprovedApplications = appsResult.Where(a => a.Status == "Approved").ToList();
+
+        // 2. Set Initial State
+        if (Disbursement != null)
+        {
+            internalDisbursement = Disbursement;
+            selectedLoanApplicationId = internalDisbursement.LoanApplicationId;
+        }
+        else if (InitialLoanApplicationId.HasValue)
+        {
+            selectedLoanApplicationId = InitialLoanApplicationId.Value;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        if (form == null) return;
+        await form.ValidateAsync();
+        if (!form.IsValid) return;
+
+        _processing = true;
+        try
+        {
+            if (internalDisbursement.Id == 0)
+            {
+                var createDto = new CreateLoanDisbursementDTO
+                {
+                    LoanApplicationId = selectedLoanApplicationId,
+                    PrincipalDisbursed = internalDisbursement.PrincipalDisbursed,
+                    InterestRate = internalDisbursement.InterestRate,
+                    PaymentMode = internalDisbursement.PaymentMode,
+                    ReferenceNumber = internalDisbursement.ReferenceNumber,
+                    DisbursementDate = internalDisbursement.DisbursementDate,
+                    InterestClockStartDate = internalDisbursement.DisbursementDate,
+                    MaturityDate = internalDisbursement.MaturityDate,
+                    DisbursedBy = "Manager" // Replace with actual Auth user if available
+                };
+
+                var result = await DisbursementService.DisburseLoanAsync(createDto);
+                if (result)
+                {
+                    Snackbar.Add("Loan disbursed successfully", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add("Failed to process disbursement", Severity.Error);
+                }
+            }
+            else
+            {
+                var updateDto = new UpdateLoanDisbursementDTO
+                {
+                    ReferenceNumber = internalDisbursement.ReferenceNumber,
+                    Status = (int)internalDisbursement.Status
+                };
+
+                var result = await DisbursementService.UpdateDisbursementAsync(internalDisbursement.Id, updateDto);
+                if (result)
+                {
+                    Snackbar.Add("Disbursement details updated", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add("Update failed", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"An error occurred: {ex.Message}", Severity.Error);
+        }
+        finally { _processing = false; }
+    }
+}

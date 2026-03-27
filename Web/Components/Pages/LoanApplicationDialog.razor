@@ -1,6 +1,7 @@
 @using Application.DTO
 @using Application.Interfaces
 @inject ILoanApplicationService LoanService
+@inject IBorrowerService BorrowerService
 @inject ISnackbar Snackbar
 
 <MudDialog>
@@ -13,8 +14,29 @@
     <DialogContent>
         <MudForm @ref="form" @bind-IsValid="@success">
             <MudGrid>
+@* Searchable Borrower Field *@
+                <MudItem xs="12">
+                    @* <MudTextField T="string" @bind-Value="searchTerm" Immediate="true" Clearable="true" 
+                                  Placeholder="Search by name or ID..." Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" /> *@
+                    <MudSelect T="BorrowerDTO" Label="Select Borrower" @bind-Value="SelectedBorrower" 
+                               Required="true" RequiredError="Borrower is required!" Variant="Variant.Outlined"
+                               ToStringFunc="@BorrowerToString">
+                        @foreach (var borrower in FilteredBorrowers)
+                        {
+                            <MudSelectItem Value="@borrower">@($"{borrower.FirstName} {borrower.LastName} (ID: {borrower.IdentificationNumber})")</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
                 <MudItem xs="12" md="6">
-                    <MudSelect T="int" Label="Loan Product" @bind-Value="Model.ProductId" Required="true" AnchorOrigin="Origin.BottomCenter">
+<MudSelect T="int" Label="Loan Product" @bind-Value="Model.loanProductId" 
+              Required="true" RequiredError="Product is required!" Variant="Variant.Outlined"
+
+ToStringFunc="@((int id) => Products.FirstOrDefault(p => p.Id == id)?.ProductName ?? string.Empty)">
+
+
+
                         @foreach (var product in Products)
                         {
                             <MudSelectItem Value="@product.Id">@product.ProductName</MudSelectItem>
@@ -23,7 +45,13 @@
                 </MudItem>
 
                 <MudItem xs="12" md="6">
-                    <MudSelect T="int" Label="Payment Modality" @bind-Value="Model.ModalityId" Required="true" AnchorOrigin="Origin.BottomCenter">
+<MudSelect T="int" Label="Payment Modality" @bind-Value="Model.paymentModalityId" 
+              Required="true" RequiredError="Modality is required!" Variant="Variant.Outlined"
+
+ToStringFunc="@((int id) => Modalities.FirstOrDefault(m => m.Id == id)?.Name ?? string.Empty)">
+
+
+
                         @foreach (var modality in Modalities)
                         {
                             <MudSelectItem Value="@modality.Id">@modality.Name</MudSelectItem>
@@ -32,12 +60,12 @@
                 </MudItem>
                 
                 <MudItem xs="12" md="6">
-                    <MudNumericField T="decimal" Label="Requested Amount" @bind-Value="Model.RequestedAmount" 
-                                    Format="N2" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.AttachMoney" HideSpinButtons="true" />
+                <MudNumericField T="decimal" Label="Requested Amount" @bind-Value="Model.RequestedAmount" 
+                                     Required="true" RequiredError="Amount is required" Min="1" Format="N2" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.AttachMoney" HideSpinButtons="true" />
                 </MudItem>
                 
                 <MudItem xs="12" md="6">
-                    <MudNumericField T="int" Label="Loan Term (Months)" @bind-Value="Model.LoanTerm" Required="true" Min="1" />
+                <MudNumericField T="int" Label="Loan Term (Months)" @bind-Value="Model.LoanTerm" Required="true" RequiredError="Loan term is required" Min="1" />
                 </MudItem>
 
                 <MudItem xs="12">
@@ -46,7 +74,7 @@
                                   Placeholder="Explain why the borrower needs this loan..." />
                 </MudItem>
 
-                @if (Model.Id != 0) // Only show Status if editing
+                @if (Model.Id != 0) 
                 {
                     <MudItem xs="12">
                         <MudAlert Severity="Severity.Info">Current Status: @Model.Status</MudAlert>
@@ -57,40 +85,114 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!success)">Create Application</MudButton>
+         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Disabled="@_processing">
+            @(_processing ? "Processing..." : "Save Application")
+        </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
+    @using System.Linq
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
     
     [Parameter] public LoanApplicationDTO Model { get; set; } = new();
-    
     [Parameter] public List<LoanProductDTO> Products { get; set; } = new();
-
-    // Added to match your DTO's ModalityId
     [Parameter] public List<PaymentModalityDTO> Modalities { get; set; } = new();
 
+    private BorrowerDTO? SelectedBorrower;
+    private List<BorrowerDTO> AllBorrowers = new();
+    private List<BorrowerDTO> FilteredBorrowers => AllBorrowers.Where(b =>
+        string.IsNullOrEmpty(searchTerm) ||
+        $"{b.FirstName} {b.LastName}".Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+        b.IdentificationNumber.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+    ).ToList();
+    private string searchTerm = "";
+    private bool _processing = false;
     bool success;
     MudForm form;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await BorrowerService.GetAllBorrowersAsync();
+        if (result != null)
+        {
+            AllBorrowers = result.Select(b => new BorrowerDTO 
+            { 
+                Id = b.Id, 
+                FirstName = b.FirstName, 
+                LastName = b.LastName, 
+                IdentificationNumber = b.IdentificationNumber 
+            }).ToList();
+        }
+
+        if (Model.BorrowerId != 0)
+        {
+            SelectedBorrower = AllBorrowers.FirstOrDefault(x => x.Id == Model.BorrowerId);
+        }
+    }
+
+    private string? BorrowerToString(BorrowerDTO? b) => b == null ? null : $"{b.FirstName} {b.LastName} (ID: {b.IdentificationNumber})";
+
+
+
+
+
+
 
     private async Task Submit()
     {
         await form.Validate();
-        if (form.IsValid)
+        
+        if (!form.IsValid)
         {
-            // The Service generates the ApplicationNumber and Date automatically
+            Snackbar.Add("Please correct form errors and try again.", Severity.Error);
+            return;
+        }
+
+        // Sync SelectedBorrower to Model
+        if (SelectedBorrower == null)
+        {
+            Snackbar.Add("Please select a Borrower.", Severity.Warning);
+            return;
+        }
+        Model.BorrowerId = SelectedBorrower.Id;
+        Model.BorrowerName = $"{SelectedBorrower.FirstName} {SelectedBorrower.LastName}";
+
+        // Safety check IDs
+if (Model.BorrowerId == 0 || Model.loanProductId <= 0 || Model.paymentModalityId <= 0 || Model.RequestedAmount <= 0 || Model.LoanTerm <= 0)
+        {
+            Snackbar.Add("Please fill all required fields correctly.", Severity.Warning);
+            return;
+        }
+
+        if (AllBorrowers.Count == 0)
+        {
+            Snackbar.Add("No borrowers available. Create a borrower first.", Severity.Warning);
+            return;
+        }
+
+_processing = true;
+
+        try
+        {
             var result = await LoanService.CreateApplicationAsync(Model);
-            
             if (result != null)
             {
-                Snackbar.Add($"Application {result.ApplicationNumber} Created Successfully", Severity.Success);
+                Snackbar.Add($"Application {result.ApplicationNumber} created successfully!", Severity.Success);
                 MudDialog.Close(DialogResult.Ok(true));
             }
             else
             {
-                Snackbar.Add("Failed to create application. Please check your inputs.", Severity.Error);
+                Snackbar.Add("Failed to save. Check data.", Severity.Error);
             }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
         }
     }
 

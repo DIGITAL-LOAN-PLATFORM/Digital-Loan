@@ -73,7 +73,7 @@
             {
                 // Note: Ensure your Service/Interface name matches (UpdateBorrowerAsync or UpdateGuarantorTypeAsync)
                 var updateDto = new UpdateGuarantorTypeDTO { Name = Model.Name };
-                await GuarantorTypeService.UpdateGuarantorAsync(GuarantorTypeId!.Value, updateDto);
+                await GuarantorTypeService.UpdateGuarantorTypeAsync(GuarantorTypeId!.Value, updateDto);
                 Snackbar.Add("Guarantor Type updated successfully", Severity.Success);
             }
             else
