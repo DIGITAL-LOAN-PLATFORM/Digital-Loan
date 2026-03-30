@@ -1,0 +1,211 @@
+@using Application.DTO
+@using Application.Interface
+@using Application.Interfaces
+@using Domain.Entities
+@using Microsoft.AspNetCore.Components.Forms
+
+@inject IProvidedDocumentService DocumentService
+@inject ILoanApplicationService LoanApplicationService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Class="mr-3 mb-n1" />
+            Upload Document
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="3">
+            
+            @* 1. Loan Application Selection *@
+            <MudItem xs="12">
+                <MudSelect T="LoanApplicationDTO" 
+                           Label="Select Pending Application" 
+                           Value="_selectedApplication"
+                           Required="true"
+                           Variant="Variant.Outlined"
+                           ToStringFunc="@(a => a == null ? "" : $"{a.ApplicationNumber} - {a.BorrowerName}")"
+                           ValueChanged="OnApplicationSelected">
+                    @if (_pendingApplications == null || !_pendingApplications.Any())
+                    {
+                        <MudSelectItem Value="@((LoanApplicationDTO)null!)" Disabled="true">No pending applications found</MudSelectItem>
+                    }
+                    else
+                    {
+                        @foreach (var app in _pendingApplications)
+                        {
+                            <MudSelectItem Value="@app">@app.ApplicationNumber - @app.BorrowerName</MudSelectItem>
+                        }
+                    }
+                </MudSelect>
+            </MudItem>
+
+            @* 2. Document Type Selection *@
+            <MudItem xs="12">
+                <MudSelect T="string" 
+                           Label="File Type" 
+                           @bind-Value="_selectedFileFormat" 
+                           Variant="Variant.Outlined" 
+                           Required="true">
+                    <MudSelectItem Value="@("PDF")">PDF Document (.pdf)</MudSelectItem>
+                    <MudSelectItem Value="@("PNG")">Image (.png)</MudSelectItem>
+                    <MudSelectItem Value="@("JPG")">Image (.jpg)</MudSelectItem>
+                    <MudSelectItem Value="@("DOCX")">Word Document (.docx)</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            @* 3. File Upload Area *@
+            <MudItem xs="12">
+                <MudPaper Class="pa-4" Elevation="0" Style="border: 2px dashed #1976d2; border-radius: 8px; background-color: #f0f7ff;">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                        <InputFile id="fileInput" OnChange="HandleFileSelected" hidden />
+                        <MudButton HtmlTag="label" 
+                                   for="fileInput" 
+                                   Variant="Variant.Filled" 
+                                   Color="Color.Primary" 
+                                   StartIcon="@Icons.Material.Filled.CloudUpload">
+                            Browse Files
+                        </MudButton>
+                        @if (_fileToUpload != null)
+                        {
+                            <MudChip T="string" Color="Color.Success" OnClose="ClearFile" Variant="Variant.Text">
+                                @_fileToUpload.Name (@FormatFileSize(_fileToUpload.Size))
+                            </MudChip>
+                        }
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            @* 4. Optional Description *@
+            <MudItem xs="12">
+                <MudTextField Label="Document Name / Description" 
+                              @bind-Value="_documentName" 
+                              Variant="Variant.Outlined" 
+                              Lines="1" />
+            </MudItem>
+
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="UploadFileAsync" 
+                   Disabled="@IsUploadDisabled()">
+            @if (_isUploading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2"/>
+                <span>Uploading...</span>
+            }
+            else
+            {
+                <span>Upload Document</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+    
+    private IBrowserFile? _fileToUpload;
+    private LoanApplicationDTO? _selectedApplication;
+    private List<LoanApplicationDTO> _pendingApplications = new();
+    
+    private string _selectedFileFormat = string.Empty;
+    private string _documentName = string.Empty;
+    private bool _isUploading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPendingApplicationsAsync();
+    }
+
+    private async Task LoadPendingApplicationsAsync()
+    {
+        try
+        {
+            var apps = await LoanApplicationService.GetAllApplicationsAsync();
+            if (apps != null)
+            {
+                _pendingApplications = apps
+                    .Where(a => a.Status?.Trim().Equals("Pending", StringComparison.OrdinalIgnoreCase) ?? false)
+                    .ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading applications: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void OnApplicationSelected(LoanApplicationDTO app)
+    {
+        _selectedApplication = app;
+    }
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        _fileToUpload = e.File;
+        var ext = System.IO.Path.GetExtension(e.File.Name).ToUpper().Replace(".", "");
+        _selectedFileFormat = (ext == "JPEG") ? "JPG" : ext;
+        
+        if (string.IsNullOrWhiteSpace(_documentName)) 
+            _documentName = e.File.Name;
+    }
+
+    private void ClearFile() => _fileToUpload = null;
+    private void Cancel() => MudDialog?.Cancel();
+    private bool IsUploadDisabled() => _isUploading || _fileToUpload == null || _selectedApplication == null;
+
+    private async Task UploadFileAsync()
+    {
+        if (IsUploadDisabled()) return;
+
+        _isUploading = true;
+        try 
+        {
+            // 1. Read file into buffer
+            using var stream = _fileToUpload!.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            var buffer = new byte[_fileToUpload.Size];
+            await stream.ReadAsync(buffer);
+
+            // 2. Prepare the DTO
+            var uploadDto = new CreateProvidedDocumentDTO
+            {
+                LoanApplicationId = _selectedApplication!.Id,
+                DocumentName = _documentName,
+                FileName = _fileToUpload.Name,
+                ContentType = _fileToUpload.ContentType,
+                FileSize = _fileToUpload.Size,
+                FileContent = buffer,
+                UploadedBy = "System User",
+                
+                // IMPORTANT: Since your DB requires a RequiredDocumentId, 
+                // we set it to null (if allowed) or a valid ID.
+                // If your CreateProvidedDocumentDTO.RequiredDocumentId is not nullable, 
+                // you MUST update the DTO to int? or provide a valid integer ID here.
+                RequiredDocumentId = null 
+            };
+
+            // 3. Call Service
+            var result = await DocumentService.UploadDocumentAsync(uploadDto);
+            
+            if (result)
+            {
+                Snackbar.Add("Document uploaded successfully!", Severity.Success);
+                MudDialog?.Close(DialogResult.Ok(true));
+            }
+        }
+        catch (Exception ex)
+        {
+            // This will now catch that Foreign Key error specifically
+            Snackbar.Add($"Upload Failed: {ex.Message}", Severity.Error);
+            Console.WriteLine(ex.ToString());
+        }
+        finally { _isUploading = false; }
+    }
+
+    private string FormatFileSize(long bytes) => $"{(bytes / 1024.0 / 1024.0):N2} MB";
+}

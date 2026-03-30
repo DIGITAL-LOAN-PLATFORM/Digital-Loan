@@ -1,0 +1,68 @@
+@using Application.DTO
+@using Application.Interface
+@using Domain.Entities
+@using MudBlazor
+
+@inject ISnackbar Snackbar
+@inject IReasonService ReasonService
+
+<MudDialog T="bool">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2 mb-1"/>
+            Add Reason
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="success">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Reason Name" Required="true" @bind-Value="_model.Name" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Disabled="@_processing">
+            @(_processing ? "Processing..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public MudDialogInstance Dialog { get; set; } = default!;
+    [Parameter] public int ReasonId { get; set; } = 0;
+
+    private MudForm? form;
+    private bool success;
+    private bool _processing = false;
+    private CreateReasonDTO _model = new();
+
+    private async Task Submit()
+    {
+        if (form == null) return;
+        await form.Validate();
+            if (!success) return;
+
+        _processing = true;
+        try
+        {
+            if (ReasonId == 0)
+            {
+                await ReasonService.CreateReasonAsync(new CreateReasonDTO { Name = _model.Name });
+                Snackbar.Add("Reason created successfully", Severity.Success);
+            }
+            else
+            {
+                await ReasonService.UpdateReasonAsync(ReasonId, new UpdateReasonDTO { Name = _model.Name });
+                Snackbar.Add("Reason updated successfully", Severity.Success);
+            }
+            Dialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        finally { _processing = false; }
+    }
+
+    private void Cancel() => Dialog.Cancel();
+}

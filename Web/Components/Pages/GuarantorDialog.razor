@@ -132,10 +132,10 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
-    
     [Parameter] public int? InitialLoanApplicationId { get; set; }
     [Parameter] public GuarantorDTO? Guarantor { get; set; }
+
+    [CascadingParameter] public MudDialogInstance DialogInstance { get; set; } = null!;
 
     private GuarantorDTO internalGuarantor = new() { ResidentialAddress = new() };
     private List<LoanApplicationDTO> LoanApplications = new();
@@ -151,12 +151,11 @@
     private List<string> Villages = new();
 
     private bool _processing = false;
-    private bool success;
+    private bool success; // MudForm binds to this
     private MudForm? form;
 
     protected override async Task OnInitializedAsync()
     {
-        // 1. Load basic lookups
         Provinces = await LocationService.GetProvincesAsync() ?? new();
         
         var appsResult = await LoanApplicationService.GetAllApplicationsAsync();
@@ -166,7 +165,6 @@
         if (typesResult != null) 
             GuarantorTypes = typesResult.Select(t => new GuarantorTypeDTO { Id = t.Id, Name = t.Name }).ToList();
 
-        // 2. Set Initial State
         if (Guarantor != null)
         {
             internalGuarantor = Guarantor;
@@ -175,14 +173,14 @@
             selectedLoanApplicationId = internalGuarantor.LoanApplicationId;
             selectedGuarantorTypeId = internalGuarantor.GuarantorTypeId;
 
-            // Pre-load location dropdowns based on existing data
+            // Load existing location data
             if (!string.IsNullOrEmpty(internalGuarantor.ResidentialAddress.Province))
                 Districts = await LocationService.GetDistrictsAsync(internalGuarantor.ResidentialAddress.Province) ?? new();
             if (!string.IsNullOrEmpty(internalGuarantor.ResidentialAddress.District))
                 Sectors = await LocationService.GetSectorsAsync(internalGuarantor.ResidentialAddress.District) ?? new();
-             if (!string.IsNullOrEmpty(internalGuarantor.ResidentialAddress.Sector))
+            if (!string.IsNullOrEmpty(internalGuarantor.ResidentialAddress.Sector))
                 Cells = await LocationService.GetCellsAsync(internalGuarantor.ResidentialAddress.Sector) ?? new();
-             if (!string.IsNullOrEmpty(internalGuarantor.ResidentialAddress.Cell))
+            if (!string.IsNullOrEmpty(internalGuarantor.ResidentialAddress.Cell))
                 Villages = await LocationService.GetVillagesAsync(internalGuarantor.ResidentialAddress.Cell) ?? new();
         }
         else if (InitialLoanApplicationId.HasValue)
@@ -194,43 +192,60 @@
     private async Task OnProvinceChanged(string province)
     {
         internalGuarantor.ResidentialAddress.Province = province;
-        Districts = await LocationService.GetDistrictsAsync(province);
         internalGuarantor.ResidentialAddress.District = "";
-        internalGuarantor.ResidentialAddress.Sector = "";
-        Sectors.Clear(); Cells.Clear(); Villages.Clear();
+        Districts = await LocationService.GetDistrictsAsync(province) ?? new();
+        ResetLocationFields(1);
+        StateHasChanged();
     }
 
     private async Task OnDistrictChanged(string district)
     {
         internalGuarantor.ResidentialAddress.District = district;
-        Sectors = await LocationService.GetSectorsAsync(district);
         internalGuarantor.ResidentialAddress.Sector = "";
-        Cells.Clear(); Villages.Clear();
+        Sectors = await LocationService.GetSectorsAsync(district) ?? new();
+        ResetLocationFields(2);
+        StateHasChanged();
     }
 
     private async Task OnSectorChanged(string sector)
     {
         internalGuarantor.ResidentialAddress.Sector = sector;
-        Cells = await LocationService.GetCellsAsync(sector);
         internalGuarantor.ResidentialAddress.Cell = "";
-        Villages.Clear();
+        Cells = await LocationService.GetCellsAsync(sector) ?? new();
+        ResetLocationFields(3);
+        StateHasChanged();
     }
 
     private async Task OnCellChanged(string cell)
     {
         internalGuarantor.ResidentialAddress.Cell = cell;
+        internalGuarantor.ResidentialAddress.Village = "";
         Villages = await LocationService.GetVillagesAsync(cell) ?? new();
+        StateHasChanged();
     }
 
     private void OnVillageChanged(string village) => internalGuarantor.ResidentialAddress.Village = village;
 
-    private void Cancel() => MudDialog.Cancel();
+    private void ResetLocationFields(int level)
+    {
+        if (level <= 1) { Sectors.Clear(); internalGuarantor.ResidentialAddress.Sector = ""; }
+        if (level <= 2) { Cells.Clear(); internalGuarantor.ResidentialAddress.Cell = ""; }
+        if (level <= 3) { Villages.Clear(); internalGuarantor.ResidentialAddress.Village = ""; }
+    }
+
+    private void Cancel() => DialogInstance.Cancel();
 
     private async Task Submit()
     {
         if (form == null) return;
-        await form.ValidateAsync();
-        if (!form.IsValid) return;
+        
+        // Force validation and check the result directly
+        await form.Validate();
+        if (!form.IsValid) 
+        {
+            Snackbar.Add("Please correct the errors in the form", Severity.Warning);
+            return;
+        }
 
         _processing = true;
         try
@@ -253,12 +268,11 @@
                 if (result.IsSuccess)
                 {
                     Snackbar.Add("Guarantor added successfully", Severity.Success);
-                    MudDialog.Close(DialogResult.Ok(true));
+                    DialogInstance.Close(DialogResult.Ok(true));
                 }
                 else
                 {
-                    // Changed .ErrorMessage to .Error to match Result pattern
-                    Snackbar.Add(result.Error, Severity.Error);
+                    Snackbar.Add(result.Error ?? "Failed to add guarantor", Severity.Error);
                 }
             }
             else
@@ -277,12 +291,11 @@
                 if (result.IsSuccess)
                 {
                     Snackbar.Add("Guarantor updated successfully", Severity.Success);
-                    MudDialog.Close(DialogResult.Ok(true));
+                    DialogInstance.Close(DialogResult.Ok(true));
                 }
                 else
                 {
-                    // Changed .ErrorMessage to .Error to match Result pattern
-                    Snackbar.Add(result.Error, Severity.Error);
+                    Snackbar.Add(result.Error ?? "Failed to update guarantor", Severity.Error);
                 }
             }
         }

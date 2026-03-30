@@ -2,6 +2,10 @@ using Domain.Entities;
 using Application.Interface;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Infrastructure.Repositories
 {
@@ -14,9 +18,21 @@ namespace Infrastructure.Repositories
             _context = context;
         }
 
+        // 1. Standard Get By ID
         public async Task<LoanDisbursement?> GetByIdAsync(int id)
         {
             return await _context.LoanDisbursements
+                .Include(d => d.LoanApplication)
+                    .ThenInclude(la => la.Borrower)
+                .FirstOrDefaultAsync(d => d.Id == id);
+        }
+
+        // 2. FIXED: Implementation for the Waterfall Logic
+        public async Task<LoanDisbursement?> GetByIdWithPenaltiesAsync(int id)
+        {
+            return await _context.LoanDisbursements
+                .Include(d => d.Penalties) // Crucial for Step 2 of Waterfall
+                .Include(d => d.RepaymentSchedules) // Crucial for Step 1 & 3 of Waterfall
                 .Include(d => d.LoanApplication)
                     .ThenInclude(la => la.Borrower)
                 .FirstOrDefaultAsync(d => d.Id == id);
@@ -27,7 +43,7 @@ namespace Infrastructure.Repositories
             return await _context.LoanDisbursements
                 .Include(d => d.LoanApplication)
                     .ThenInclude(la => la.Borrower)
-                .AsNoTracking() // Recommended for Read-only lists
+                .AsNoTracking()
                 .AsSplitQuery() 
                 .ToListAsync();
         }
@@ -68,6 +84,21 @@ namespace Infrastructure.Repositories
                 .Include(d => d.LoanApplication)
                     .ThenInclude(la => la.Borrower)
                 .ToListAsync();
+        }
+
+        public async Task<IEnumerable<RepaymentScheduleItem>> GetNewlyOverdueInstallmentsAsync()
+        {
+            return await _context.RepaymentScheduleItems
+                .Where(x => x.DueDate < DateTime.Today && 
+                            !x.IsPaid && 
+                            x.LastPenaltyDate == null) 
+                .ToListAsync();
+        }
+
+        public async Task<bool> UpdateScheduleItemAsync(RepaymentScheduleItem item)
+        {
+            _context.RepaymentScheduleItems.Update(item);
+            return await _context.SaveChangesAsync() > 0;
         }
     }
 }

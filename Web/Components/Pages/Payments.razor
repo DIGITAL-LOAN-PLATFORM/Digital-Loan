@@ -1,0 +1,117 @@
+@page "/payments"
+@using Application.DTO
+@using Application.Interface
+@using System.Threading
+@inject IPaymentService PaymentService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h4" GutterBottom="true">Loan Payments</MudText>
+
+<MudPaper Elevation="25" Class="pa-4">
+    <MudTable Items="@_payments" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" 
+              LoadingProgressColor="Color.Info" T="PaymentDTO">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Recent Transactions</MudText>
+            <MudSpacer />
+            <MudButton Variant="Variant.Outlined" 
+                       Color="Color.Secondary" 
+                       OnClick="LoadPayments" 
+                       Class="mr-2"
+                       StartIcon="@Icons.Material.Filled.Refresh">
+                Refresh
+            </MudButton>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add" 
+                       OnClick="OpenPaymentDialog"
+                       Disabled="@_loading">
+                Process New Payment
+            </MudButton>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Date</MudTh>
+            <MudTh>Loan Ref</MudTh>
+            <MudTh>Borrower</MudTh>
+            <MudTh>Total Paid</MudTh>
+            <MudTh>Principal</MudTh>
+            <MudTh>Interest</MudTh>
+            <MudTh>Penalty</MudTh>
+            <MudTh>Reference</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Date">@context.PaymentDate.ToString("dd MMM yyyy")</MudTd>
+            <MudTd DataLabel="Loan Ref">@context.LoanReferenceNumber</MudTd>
+            <MudTd DataLabel="Borrower">@context.BorrowerName</MudTd>
+            <MudTd DataLabel="Total Paid"><b>@context.TotalAmountPaid.ToString("N0") RWF</b></MudTd>
+            <MudTd DataLabel="Principal" Style="color:green">@context.PrincipalAllocated.ToString("N0")</MudTd>
+            <MudTd DataLabel="Interest" Style="color:blue">@context.InterestAllocated.ToString("N0")</MudTd>
+            <MudTd DataLabel="Penalty" Style="color:red">@context.PenaltyAllocated.ToString("N0")</MudTd>
+            <MudTd DataLabel="Reference">@context.TransactionReference</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            @if (!_loading)
+            {
+                <MudText Align="Align.Center" Class="pa-4">No payments found in the system. Try refreshing or adding a new payment.</MudText>
+            }
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private IEnumerable<PaymentDTO> _payments = new List<PaymentDTO>();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPayments();
+    }
+
+  private async Task LoadPayments()
+{
+    try 
+    {
+        _loading = true;
+        StateHasChanged(); 
+
+        // CHANGE THIS LINE: Use the "GetAll" method you just added to your service
+        var result = await PaymentService.GetAllPaymentsAsync();
+        
+        _payments = result ?? new List<PaymentDTO>();
+    }
+    catch (Exception ex)
+    {
+        Snackbar.Add("Load Error: " + ex.Message, Severity.Error);
+    }
+    finally 
+    {
+        _loading = false;
+        StateHasChanged(); 
+    }
+}
+
+    private async Task OpenPaymentDialog()
+{
+    var options = new DialogOptions { 
+        CloseOnEscapeKey = true, 
+        MaxWidth = MaxWidth.Medium, 
+        FullWidth = true,
+        BackdropClick = false // Fixed the property name here
+    };
+
+    var dialog = await DialogService.ShowAsync<PaymentDialog>("Process Payment", options);
+    var result = await dialog.Result;
+
+    // Check if the dialog was closed with a 'Success' result
+    if (result != null && !result.Canceled)
+    {
+        // This is the critical part that refreshes the UI table
+        await LoadPayments(); 
+        
+        Snackbar.Add("Payment list updated successfully.", Severity.Success);
+    }
+}
+}

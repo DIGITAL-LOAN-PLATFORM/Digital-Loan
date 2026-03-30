@@ -1,0 +1,460 @@
+@page "/documents"
+@using Application.DTO
+@using Application.Interface
+@using Domain.Entities
+@using Microsoft.AspNetCore.Components
+@inject IProvidedDocumentService DocumentService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Document Management - Digital Loan</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-8">
+    <MudBreadcrumbs Items="_items" Class="mb-6"></MudBreadcrumbs>
+
+    <MudGrid>
+        <!-- Header -->
+        <MudItem xs="12">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="4" Class="mb-6">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.h4">
+                        <MudIcon Icon="@Icons.Material.Filled.Description" Class="mr-2 mb-n1" />
+                        Document Management
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Default">
+                        Manage loan documents, uploads, and approvals
+                    </MudText>
+                </MudStack>
+                <MudSpacer />
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.CloudUpload"
+                           OnClick="OpenDocumentDialog"
+                           Size="Size.Large">
+                    Upload Document
+                </MudButton>
+            </MudStack>
+        </MudItem>
+
+        <!-- Filter Section -->
+        <MudItem xs="12">
+            <MudPaper Class="pa-4" Elevation="0">
+                <MudGrid>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudAutocomplete T="LoanDisbursementDTO" 
+                                         Label="Filter by Loan Reference" 
+                                         Value="_filterLoan"
+                                         SearchFunc="@SearchLoans"
+                                         ToStringFunc="@(l => l == null ? null : $"{l.ReferenceNumber} - {l.BorrowerName}")" 
+                                         Variant="Variant.Outlined" 
+                                         ValueChanged="@((LoanDisbursementDTO loan) => OnFilterLoanChanged(loan))" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudSelect T="string" Label="Filter by Status" 
+                                   MultiSelection="false"
+                                   @bind-Value="_filterStatus" 
+                                   Variant="Variant.Outlined">
+                            <MudSelectItem T="string" Value='@("")'>All Statuses</MudSelectItem>
+                            <MudSelectItem T="string" Value='@("Uploaded")'>Uploaded</MudSelectItem>
+                            <MudSelectItem T="string" Value='@("Verified")'>Verified</MudSelectItem>
+                            <MudSelectItem T="string" Value='@("Approved")'>Approved</MudSelectItem>
+                            <MudSelectItem T="string" Value='@("Rejected")'>Rejected</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudTextField @bind-Value="_filterDocumentName" 
+                                      Label="Search Document Name" 
+                                      Variant="Variant.Outlined"
+                                      Clearable="true" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary" 
+                                   FullWidth="true"
+                                   OnClick="ApplyFilters">
+                            <MudIcon Icon="@Icons.Material.Filled.FilterList" Class="mr-2"/>
+                            Apply Filters
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Documents Table -->
+        <MudItem xs="12">
+            <MudPaper Class="mt-6">
+                @if (_isLoading)
+                {
+            <MudContainer Class="py-8">
+                <MudProgressLinear Indeterminate="true" />
+                <MudStack Spacing="3" Class="py-8">
+                    <MudSkeleton SkeletonType="SkeletonType.Text" />
+                    <MudSkeleton SkeletonType="SkeletonType.Text" />
+                    <MudSkeleton SkeletonType="SkeletonType.Text" />
+                </MudStack>
+            </MudContainer>
+                }
+                else if (_documents == null || !_documents.Any())
+                {
+                    <MudContainer Class="py-8">
+                        <MudAlert Severity="Severity.Info" Dense="true" Icon="@Icons.Material.Filled.Info">
+                            No documents found. Click "Upload Document" to add one.
+                        </MudAlert>
+                    </MudContainer>
+                }
+                else
+                {
+                    <MudDataGrid Items="@_documents" Dense="true" Bordered="true" Hover="true"
+                                 Striped="true" Filterable="false" SortMode="SortMode.Single">
+                        <Columns>
+                            <PropertyColumn Property="x => x.FileName" Title="File Name" />
+                            <PropertyColumn Property="x => x.RequiredDocumentType" Title="Document Type" />
+                            <PropertyColumn Property="x => x.BorrowerName" Title="Borrower" />
+                            <PropertyColumn Property="x => x.LoanReferenceNumber" Title="Loan Reference" />
+                            <PropertyColumn Property="x => x.Status" Title="Status">
+                                <CellTemplate>
+                                    <MudChip Size="Size.Small" 
+                                             Color="@GetStatusColor(context.Item.Status)" 
+                                             Variant="Variant.Text">
+                                        @context.Item.Status
+                                    </MudChip>
+                                </CellTemplate>
+                            </PropertyColumn>
+                            <PropertyColumn Property="x => x.UploadedDate" Title="Uploaded" 
+                                           Format="dd MMM yyyy HH:mm" />
+                            <PropertyColumn Property="x => x.FileSize" Title="Size">
+                                <CellTemplate>
+                                    @FormatFileSize(context.Item.FileSize)
+                                </CellTemplate>
+                            </PropertyColumn>
+                            <TemplateColumn Title="Actions" Sortable="false">
+                                <CellTemplate>
+                                    @if (context.Item.Status == "Uploaded")
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" 
+                                                      Size="Size.Small" 
+                                                      Color="Color.Success"
+                                                      OnClick="@(async () => await ApproveDocument(context.Item.Id))" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Cancel" 
+                                                      Size="Size.Small" 
+                                                      Color="Color.Error"
+                                                      OnClick="@(async () => await RejectDocument(context.Item.Id))" />
+                                    }
+                                    <MudIconButton Icon="@Icons.Material.Filled.Download" 
+                                                  Size="Size.Small" 
+                                                  Color="Color.Info"
+                                                  OnClick="@(async () => await DownloadDocument(context.Item.Id))" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                  Size="Size.Small" 
+                                                  Color="Color.Default"
+                                                  OnClick="@(async () => await DeleteDocument(context.Item.Id))" />
+                                </CellTemplate>
+                            </TemplateColumn>
+                        </Columns>
+                    </MudDataGrid>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <!-- Statistics Cards -->
+        <MudItem xs="12">
+            <MudGrid Class="mt-4">
+                <MudItem xs="6" sm="3">
+                    <MudCard>
+                        <MudCardContent>
+                            <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Size="Size.Large" Color="Color.Warning" />
+                                <MudText Typo="Typo.h6">@_stats["Uploaded"]</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Default">Uploaded</MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudCard>
+                        <MudCardContent>
+                            <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" />
+                                <MudText Typo="Typo.h6">@_stats["Approved"]</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Default">Approved</MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudCard>
+                        <MudCardContent>
+                            <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Cancel" Size="Size.Large" Color="Color.Error" />
+                                <MudText Typo="Typo.h6">@_stats["Rejected"]</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Default">Rejected</MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudCard>
+                        <MudCardContent>
+                            <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Large" Color="Color.Primary" />
+                                <MudText Typo="Typo.h6">@_stats["Total"]</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Default">Total</MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private List<ProvidedDocumentDTO>? _documents;
+    private List<BreadcrumbItem> _items = new();
+    private bool _isLoading = true;
+    private Dictionary<string, int> _stats = new() {
+        { "Uploaded", 0 },
+        { "Approved", 0 },
+        { "Rejected", 0 },
+        { "Total", 0 }
+    };
+
+    // Filter properties
+    private LoanDisbursementDTO? _filterLoan;
+    private string _filterStatus = "";
+    private string _filterDocumentName = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _items = new()
+        {
+            new BreadcrumbItem("Home", href: "/", icon: Icons.Material.Filled.Home),
+            new BreadcrumbItem("Documents", href: null, disabled: true),
+        };
+
+        await LoadDocuments();
+    }
+
+    private async Task LoadDocuments()
+    {
+        _isLoading = true;
+        try
+        {
+            _documents = (await DocumentService.GetAllDocumentsAsync())?.ToList();
+            CalculateStatistics();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading documents: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void CalculateStatistics()
+    {
+        if (_documents == null || !_documents.Any())
+        {
+            _stats["Uploaded"] = 0;
+            _stats["Approved"] = 0;
+            _stats["Rejected"] = 0;
+            _stats["Total"] = 0;
+            return;
+        }
+
+        _stats["Uploaded"] = _documents.Count(d => d.Status == "Uploaded");
+        _stats["Approved"] = _documents.Count(d => d.Status == "Approved");
+        _stats["Rejected"] = _documents.Count(d => d.Status == "Rejected");
+        _stats["Total"] = _documents.Count;
+    }
+
+    private async Task<IEnumerable<LoanDisbursementDTO>> SearchLoans(string value, CancellationToken token)
+    {
+        if (token.IsCancellationRequested) return new List<LoanDisbursementDTO>();
+
+        try 
+        {
+            // You would need to inject ILoanDisbursement to fetch actual loans
+            // For now, return empty list as a placeholder
+            return new List<LoanDisbursementDTO>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Search Error: {ex.Message}");
+            return new List<LoanDisbursementDTO>();
+        }
+    }
+
+    private void OnFilterLoanChanged(LoanDisbursementDTO? loan)
+    {
+        _filterLoan = loan;
+    }
+
+    private void ApplyFilters()
+    {
+        if (_documents == null) return;
+
+        var filtered = new List<ProvidedDocumentDTO>(_documents);
+
+        if (_filterLoan != null)
+        {
+            filtered = filtered.Where(d => d.LoanReferenceNumber == _filterLoan.ReferenceNumber).ToList();
+        }
+
+        if (!string.IsNullOrEmpty(_filterStatus))
+        {
+            filtered = filtered.Where(d => d.Status == _filterStatus).ToList();
+        }
+
+        if (!string.IsNullOrEmpty(_filterDocumentName))
+        {
+            filtered = filtered.Where(d => 
+                d.DocumentName.Contains(_filterDocumentName, StringComparison.OrdinalIgnoreCase) ||
+                d.FileName.Contains(_filterDocumentName, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+        }
+
+        _documents = filtered;
+    }
+
+    private async Task OpenDocumentDialog()
+    {
+        var options = new DialogOptions { 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true,
+            CloseOnEscapeKey = false
+        };
+
+        var dialog = await DialogService.ShowAsync<ProvidedDocumentDialog>("Manage Documents", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadDocuments();
+        }
+    }
+
+    private async Task ApproveDocument(int documentId)
+    {
+        try 
+        {
+            var success = await DocumentService.UpdateDocumentStatusAsync(documentId, "Approved", null);
+            if (success)
+            {
+                Snackbar.Add("Document approved.", Severity.Success);
+                await LoadDocuments();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task RejectDocument(int documentId)
+    {
+        var parameters = new DialogParameters<RejectDocumentDialog> 
+        { 
+            { x => x.DocumentId, documentId }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<RejectDocumentDialog>("Reject Document", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is string remarks)
+        {
+            try 
+            {
+                var success = await DocumentService.UpdateDocumentStatusAsync(documentId, "Rejected", remarks);
+                if (success)
+                {
+                    Snackbar.Add("Document rejected.", Severity.Error);
+                    await LoadDocuments();
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task DownloadDocument(int documentId)
+    {
+        try
+        {
+            var doc = _documents?.FirstOrDefault(d => d.Id == documentId);
+            if (doc == null)
+            {
+                Snackbar.Add("Document not found.", Severity.Warning);
+                return;
+            }
+
+            // This would require a download endpoint in your API
+            // For now, show a placeholder notification
+            Snackbar.Add("Download functionality coming soon.", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteDocument(int documentId)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            title: "Delete Document",
+            markupMessage: new MarkupString("Are you sure you want to delete this document? <br/><strong>This action cannot be undone.</strong>"),
+            yesText: "Delete",
+            cancelText: "Cancel",
+            options: new DialogOptions { MaxWidth = MaxWidth.Small }
+        );
+
+        if (confirmed.HasValue && confirmed.Value)
+        {
+            try 
+            {
+                var success = await DocumentService.DeleteDocumentAsync(documentId);
+                if (success)
+                {
+                    Snackbar.Add("Document deleted successfully.", Severity.Success);
+                    await LoadDocuments();
+                }
+                else
+                {
+                    Snackbar.Add("Failed to delete document.", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Uploaded" => Color.Warning,
+        "Verified" => Color.Info,
+        "Approved" => Color.Success,
+        "Rejected" => Color.Error,
+        _ => Color.Default
+    };
+
+    private string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{(bytes / 1024.0):N1} KB";
+        return $"{(bytes / (1024.0 * 1024)):N1} MB";
+    }
+}
+
+<style>
+    .mud-theme-default .mud-card {
+        background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+    }
+</style>

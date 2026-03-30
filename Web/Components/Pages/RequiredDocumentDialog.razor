@@ -1,0 +1,74 @@
+@using Application.DTO
+@using MudBlazor
+
+<MudDialog T="object">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@Title</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (IsCreate)
+        {
+            <MudTextField @bind-Value="CreateModel!.DocumentName"
+                          Label="Document Name"
+                          Variant="Variant.Outlined"
+                          Class="mb-3" />
+            <MudTextField @bind-Value="CreateModel!.DocumentType"
+                          Label="Document Type"
+                          Variant="Variant.Outlined"
+                          Class="mb-3" />
+        }
+        else
+        {
+            <MudTextField @bind-Value="UpdateModel!.DocumentName"
+                          Label="Document Name"
+                          Variant="Variant.Outlined"
+                          Class="mb-3" />
+            <MudTextField @bind-Value="UpdateModel!.DocumentType"
+                          Label="Document Type"
+                          Variant="Variant.Outlined"
+                          Class="mb-3" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="OnValidSubmit">
+            @SubmitText
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public bool IsCreate { get; set; } = true;
+    [Parameter] public CreateRequiredDocumentDTO? CreateModel { get; set; }
+    [Parameter] public UpdateRequiredDocumentDTO? UpdateModel { get; set; }
+
+    private string Title => IsCreate ? "Create Required Document" : "Edit Required Document";
+    private string SubmitText => IsCreate ? "Create" : "Save";
+
+    protected override void OnInitialized()
+    {
+        CreateModel ??= new CreateRequiredDocumentDTO();
+        UpdateModel ??= new UpdateRequiredDocumentDTO();
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void OnValidSubmit()
+    {
+        if (IsCreate)
+        {
+            if (string.IsNullOrWhiteSpace(CreateModel?.DocumentName)) return;
+            MudDialog.Close(DialogResult.Ok(CreateModel));
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(UpdateModel?.DocumentName)) return;
+            MudDialog.Close(DialogResult.Ok(UpdateModel));
+        }
+    }
+}
+

@@ -18,7 +18,7 @@ namespace Domain.Entities
         public int LoanTerm { get; set; }
         public string Purpose { get; set; } = string.Empty;
         public DateTime DateOfApplication { get; set; }
-public string? Status { get; set; } = "Pending";
+       public string? Status { get; set; } = "Pending";
         public List<Guarantor> Guarantors { get; set; } = new();
         public List<ProvidedDocument> ProvidedDocuments { get; set; } = new();
 

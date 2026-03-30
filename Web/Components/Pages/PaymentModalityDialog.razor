@@ -9,90 +9,66 @@
 <MudDialog>
     <TitleContent>
         <MudText Typo="Typo.h6">
-            <MudIcon Icon="@(IsEditMode ? Icons.Material.Filled.Edit : Icons.Material.Filled.AddCircle)" Class="mr-2 mb-1"/>
-            @(IsEditMode ? "Update Payment Modality" : "Add New Payment Modality")
+            <MudIcon Icon="@(Model.Id == 0 ? Icons.Material.Filled.Add : Icons.Material.Filled.Edit)" Class="mr-2"/>
+            @(Model.Id == 0 ? "Add Payment Modality" : "Update Payment Modality")
         </MudText>
     </TitleContent>
     <DialogContent>
         <MudForm @ref="form">
-            <MudGrid>
-                <MudItem xs="12">
-                    <MudTextField T="string" 
-                                Label="Payment Modality Name" 
-                                Required="true" 
-                                RequiredError="Modality name is required!"
-                                @bind-Value="Model.Modality" 
-                                Variant="Variant.Outlined" 
-                                Margin="Margin.Normal"/>
-                </MudItem>
-            </MudGrid>
+            @* Ensure Model is not null before binding *@
+            <MudTextField T="string" Label="Modality Name" @bind-Value="Model.Modality" Required="true" />
         </MudForm>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" 
-                   Color="Color.Primary" 
-                   OnClick="Submit" 
-                   Disabled="@_processing">
-            @(_processing ? "Processing..." : (IsEditMode ? "Update" : "Save"))
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">
+            Save
         </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [CascadingParameter] MudDialogInstance Dialog { get; set; } = null!;
     
-    [Parameter] public int? PaymentModalityId { get; set; }
-    [Parameter] public string? InitialModalityValue { get; set; }
-
+    // We keep this as UpdatePaymentModalityDTO because it contains the ID 
+    // needed for the Edit scenario.
+    [Parameter] public UpdatePaymentModalityDTO Model { get; set; } = new();
+    
     private MudForm? form;
-    private bool _processing = false;
-    private CreatePaymentModalityDTO Model = new();
-    private bool IsEditMode => PaymentModalityId.HasValue && PaymentModalityId.Value != 0;
-
-    protected override void OnInitialized()
-    {
-        if (IsEditMode)
-        {
-            Model.Modality = InitialModalityValue ?? "";
-        }
-    }
 
     private async Task Submit()
     {
         if (form == null) return;
-        
-        await form.ValidateAsync();
+        await form.Validate();
         if (!form.IsValid) return;
 
-        _processing = true;
-        try
+        try 
         {
-            if (IsEditMode)
+            if (Model.Id == 0)
             {
-                // FIXED: Use UpdatePaymentModalityDTO and PaymentModalityService
-                var updateDto = new UpdatePaymentModalityDTO { Modality = Model.Modality };
-                await PaymentModalityService.UpdatePaymentModalityAsync(PaymentModalityId!.Value, updateDto);
-                Snackbar.Add("Payment Modality updated successfully", Severity.Success);
+                // FIX: Map the data to a CreatePaymentModalityDTO
+                var createDto = new CreatePaymentModalityDTO
+                {
+                    Modality = Model.Modality
+                };
+                
+                await PaymentModalityService.CreatePaymentModalityAsync(createDto);
+                Snackbar.Add("Payment modality added", Severity.Success);
             }
             else
             {
-                // FIXED: Call PaymentModalityService
-                await PaymentModalityService.CreatePaymentModalityAsync(Model);
-                Snackbar.Add("Payment Modality created successfully", Severity.Success);
+                // This stays the same as it already matches the Update method
+                await PaymentModalityService.UpdatePaymentModalityAsync(Model.Id, Model);
+                Snackbar.Add("Payment modality updated", Severity.Success);
             }
             
-            MudDialog.Close(DialogResult.Ok(true));
+            Dialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
         }
-        finally
-        {
-            _processing = false;
-        }
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private void Cancel() => Dialog.Cancel();
 }

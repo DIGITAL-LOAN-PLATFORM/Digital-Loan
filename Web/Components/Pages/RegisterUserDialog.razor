@@ -60,8 +60,7 @@
 </MudDialog>
 
 @code{
-    [CascadingParameter] IMudDialogInstance DialogInstance { get; set; }
-
+private MudDialogInstance? DialogInstance;
     private RegisterUserDTO Model {get;set;} = new ();
    
 

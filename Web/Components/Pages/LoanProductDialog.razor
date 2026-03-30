@@ -39,7 +39,7 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [CascadingParameter] MudDialogInstance? DialogInstance { get; set; }
     [Parameter] public int? ProductId { get; set; }
     [Parameter] public LoanProductDTO Model { get; set; } = new();
 
@@ -49,8 +49,9 @@
 
     private async Task Submit()
     {
-        await form!.ValidateAsync();
-        if (!form.IsValid) return;
+        await form!.Validate();
+        if (!form.IsValid)
+            return;
 
         _processing = true;
         try
@@ -64,7 +65,7 @@
             if (success)
             {
                 Snackbar.Add("Product saved successfully!", Severity.Success);
-                MudDialog.Close(DialogResult.Ok(true));
+                DialogInstance.Close(DialogResult.Ok(true));
             }
             else
             {
@@ -74,5 +75,5 @@
         finally { _processing = false; }
     }
 
-    private void Cancel() => MudDialog.Cancel();
+private void Cancel() => DialogInstance.Cancel();
 }

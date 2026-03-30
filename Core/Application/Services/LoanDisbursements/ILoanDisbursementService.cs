@@ -12,5 +12,6 @@ namespace Application.Services
         Task<bool> DisburseLoanAsync(CreateLoanDisbursementDTO createDto);
         
         Task<bool> UpdateDisbursementAsync(int id, UpdateLoanDisbursementDTO updateDto);
+        
     }
 }

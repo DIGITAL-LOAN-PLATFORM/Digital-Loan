@@ -6,7 +6,7 @@
 @inject ISnackbar Snackbar
 @inject IGuarantorTypeService GuarantorTypeService
 
-<MudDialog>
+<MudDialog T="bool">
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@(IsEditMode ? Icons.Material.Filled.Edit : Icons.Material.Filled.AddCircle)" Class="mr-2 mb-1"/>
@@ -40,13 +40,12 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [CascadingParameter] MudDialogInstance Dialog { get; set; } = null!;
     
-    // Pass the existing ID if editing
     [Parameter] public int? GuarantorTypeId { get; set; }
     [Parameter] public string? InitialName { get; set; }
 
-    private MudForm? form;
+    private MudForm? form = null!;
     private bool _processing = false;
     private CreateGuarantorTypeDTO Model = new();
     private bool IsEditMode => GuarantorTypeId.HasValue && GuarantorTypeId.Value != 0;
@@ -62,8 +61,7 @@
     private async Task Submit()
     {
         if (form == null) return;
-        
-        await form.ValidateAsync();
+        await form.Validate();
         if (!form.IsValid) return;
 
         _processing = true;
@@ -71,7 +69,6 @@
         {
             if (IsEditMode)
             {
-                // Note: Ensure your Service/Interface name matches (UpdateBorrowerAsync or UpdateGuarantorTypeAsync)
                 var updateDto = new UpdateGuarantorTypeDTO { Name = Model.Name };
                 await GuarantorTypeService.UpdateGuarantorTypeAsync(GuarantorTypeId!.Value, updateDto);
                 Snackbar.Add("Guarantor Type updated successfully", Severity.Success);
@@ -82,7 +79,7 @@
                 Snackbar.Add("Guarantor Type created successfully", Severity.Success);
             }
             
-            MudDialog.Close(DialogResult.Ok(true));
+            Dialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex)
         {
@@ -94,5 +91,6 @@
         }
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private void Cancel() => Dialog.Cancel();
 }
+

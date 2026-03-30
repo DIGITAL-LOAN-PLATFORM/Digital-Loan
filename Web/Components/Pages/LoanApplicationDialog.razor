@@ -1,10 +1,13 @@
 @using Application.DTO
 @using Application.Interfaces
+@using Application.Services.LoanRequirements
+@using System.Linq
 @inject ILoanApplicationService LoanService
 @inject IBorrowerService BorrowerService
+@inject ILoanRequirementsService RequirementsService
 @inject ISnackbar Snackbar
 
-<MudDialog>
+<MudDialog T="bool">
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.Assignment" Class="mr-3"/>
@@ -16,9 +19,6 @@
             <MudGrid>
 @* Searchable Borrower Field *@
                 <MudItem xs="12">
-                    @* <MudTextField T="string" @bind-Value="searchTerm" Immediate="true" Clearable="true" 
-                                  Placeholder="Search by name or ID..." Variant="Variant.Outlined"
-                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" /> *@
                     <MudSelect T="BorrowerDTO" Label="Select Borrower" @bind-Value="SelectedBorrower" 
                                Required="true" RequiredError="Borrower is required!" Variant="Variant.Outlined"
                                ToStringFunc="@BorrowerToString">
@@ -30,13 +30,10 @@
                 </MudItem>
 
                 <MudItem xs="12" md="6">
-<MudSelect T="int" Label="Loan Product" @bind-Value="Model.loanProductId" 
-              Required="true" RequiredError="Product is required!" Variant="Variant.Outlined"
-
-ToStringFunc="@((int id) => Products.FirstOrDefault(p => p.Id == id)?.ProductName ?? string.Empty)">
-
-
-
+                    <MudSelect T="int" Label="Loan Product" Value="Model.loanProductId"
+                               ValueChanged="@HandleProductSelected"
+                               Required="true" RequiredError="Product is required!" Variant="Variant.Outlined"
+                               ToStringFunc="@((int id) => Products.FirstOrDefault(p => p.Id == id)?.ProductName ?? string.Empty)">
                         @foreach (var product in Products)
                         {
                             <MudSelectItem Value="@product.Id">@product.ProductName</MudSelectItem>
@@ -44,14 +41,28 @@ ToStringFunc="@((int id) => Products.FirstOrDefault(p => p.Id == id)?.ProductNam
                     </MudSelect>
                 </MudItem>
 
+                @if (ProductRequirements.Any())
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Requirements for this product:</MudText>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            @foreach (var req in ProductRequirements)
+                            {
+                                <MudChip T="string" 
+                                         Color="@(req.IsMandatory ? Color.Error : Color.Info)" 
+                                         Size="Size.Small"
+                                         Text="true">
+                                    @req.Name @(req.IsMandatory ? "(Required)" : "(Optional)")
+                                </MudChip>
+                            }
+                        </div>
+                    </MudItem>
+                }
+
                 <MudItem xs="12" md="6">
-<MudSelect T="int" Label="Payment Modality" @bind-Value="Model.paymentModalityId" 
-              Required="true" RequiredError="Modality is required!" Variant="Variant.Outlined"
-
-ToStringFunc="@((int id) => Modalities.FirstOrDefault(m => m.Id == id)?.Name ?? string.Empty)">
-
-
-
+                    <MudSelect T="int" Label="Payment Modality" @bind-Value="Model.paymentModalityId" 
+                               Required="true" RequiredError="Modality is required!" Variant="Variant.Outlined"
+                               ToStringFunc="@((int id) => Modalities.FirstOrDefault(m => m.Id == id)?.Name ?? string.Empty)">
                         @foreach (var modality in Modalities)
                         {
                             <MudSelectItem Value="@modality.Id">@modality.Name</MudSelectItem>
@@ -60,12 +71,12 @@ ToStringFunc="@((int id) => Modalities.FirstOrDefault(m => m.Id == id)?.Name ?? 
                 </MudItem>
                 
                 <MudItem xs="12" md="6">
-                <MudNumericField T="decimal" Label="Requested Amount" @bind-Value="Model.RequestedAmount" 
-                                     Required="true" RequiredError="Amount is required" Min="1" Format="N2" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.AttachMoney" HideSpinButtons="true" />
+                    <MudNumericField T="decimal" Label="Requested Amount" @bind-Value="Model.RequestedAmount" 
+                                         Required="true" RequiredError="Amount is required" Min="1" Format="N2" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.AttachMoney" HideSpinButtons="true" />
                 </MudItem>
                 
                 <MudItem xs="12" md="6">
-                <MudNumericField T="int" Label="Loan Term (Months)" @bind-Value="Model.LoanTerm" Required="true" RequiredError="Loan term is required" Min="1" />
+                    <MudNumericField T="int" Label="Loan Term (Months)" @bind-Value="Model.LoanTerm" Required="true" RequiredError="Loan term is required" Min="1" />
                 </MudItem>
 
                 <MudItem xs="12">
@@ -92,8 +103,7 @@ ToStringFunc="@((int id) => Modalities.FirstOrDefault(m => m.Id == id)?.Name ?? 
 </MudDialog>
 
 @code {
-    @using System.Linq
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
     
     [Parameter] public LoanApplicationDTO Model { get; set; } = new();
     [Parameter] public List<LoanProductDTO> Products { get; set; } = new();
@@ -108,6 +118,7 @@ ToStringFunc="@((int id) => Modalities.FirstOrDefault(m => m.Id == id)?.Name ?? 
     ).ToList();
     private string searchTerm = "";
     private bool _processing = false;
+    private List<LoanRequirementsDTO> ProductRequirements = new();
     bool success;
     MudForm form;
 
@@ -129,21 +140,41 @@ ToStringFunc="@((int id) => Modalities.FirstOrDefault(m => m.Id == id)?.Name ?? 
         {
             SelectedBorrower = AllBorrowers.FirstOrDefault(x => x.Id == Model.BorrowerId);
         }
+
+        // Load requirements if a product is already selected
+        if (Model.loanProductId > 0)
+        {
+            await HandleProductSelected(Model.loanProductId);
+        }
     }
 
     private string? BorrowerToString(BorrowerDTO? b) => b == null ? null : $"{b.FirstName} {b.LastName} (ID: {b.IdentificationNumber})";
 
-
-
-
-
-
+    private async Task HandleProductSelected(int productId)
+    {
+        Model.loanProductId = productId;
+        ProductRequirements.Clear();
+        if (productId > 0)
+        {
+            try
+            {
+                var requirements = await RequirementsService.GetRequirementsByProductIdAsync(productId);
+                if (requirements != null)
+                {
+                    ProductRequirements = requirements.OrderByDescending(r => r.IsMandatory).ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error loading requirements: {ex.Message}", Severity.Warning);
+            }
+        }
+    }
 
     private async Task Submit()
     {
         await form.Validate();
-        
-        if (!form.IsValid)
+        if (!success)
         {
             Snackbar.Add("Please correct form errors and try again.", Severity.Error);
             return;
@@ -159,7 +190,7 @@ ToStringFunc="@((int id) => Modalities.FirstOrDefault(m => m.Id == id)?.Name ?? 
         Model.BorrowerName = $"{SelectedBorrower.FirstName} {SelectedBorrower.LastName}";
 
         // Safety check IDs
-if (Model.BorrowerId == 0 || Model.loanProductId <= 0 || Model.paymentModalityId <= 0 || Model.RequestedAmount <= 0 || Model.LoanTerm <= 0)
+        if (Model.BorrowerId == 0 || Model.loanProductId <= 0 || Model.paymentModalityId <= 0 || Model.RequestedAmount <= 0 || Model.LoanTerm <= 0)
         {
             Snackbar.Add("Please fill all required fields correctly.", Severity.Warning);
             return;
@@ -171,7 +202,7 @@ if (Model.BorrowerId == 0 || Model.loanProductId <= 0 || Model.paymentModalityId
             return;
         }
 
-_processing = true;
+        _processing = true;
 
         try
         {
@@ -198,3 +229,4 @@ _processing = true;
 
     void Cancel() => MudDialog.Cancel();
 }
+

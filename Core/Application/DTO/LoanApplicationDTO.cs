@@ -9,7 +9,8 @@ public class LoanApplicationDTO
 
         public int loanProductId { get; set; }
         public string? ProductName { get; set; } 
-        public string? LoanProductName { get; set; } 
+        public string? LoanProductName { get; set; }
+        public decimal? ProductInterestRate { get; set; } 
 
         public int BorrowerId { get; set; }
         public string? BorrowerName { get; set; } 
@@ -33,6 +34,7 @@ public class LoanApplicationDTO
 
         public List<GuarantorDTO> Guarantors { get; set; } = new();
         public List<ProvidedDocumentDTO> ProvidedDocuments { get; set; } = new();
+        public List<RequiredDocumentDTO> RequiredDocuments { get; set; } = new();
     }
 
     public class CreateLoanApplicationDTO

@@ -1,0 +1,56 @@
+@page "/requiredocuments/{Id:int}"
+@using Domain.Entities
+@using Application.Services.RequiredDocuments
+@using Application.DTO
+@using MudBlazor
+@inject IRequiredDocumentService RequiredDocumentService
+@inject NavigationManager Navigation
+
+<PageTitle>Required Document Detail</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-6">
+    @if (document == null)
+    {
+        <MudProgressCircular Indeterminate="true" />
+    }
+    else
+    {
+        <MudText Typo="Typo.h4" Class="mb-4">Required Document Detail</MudText>
+
+        <MudPaper Class="pa-4">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2">Document Name</MudText>
+                    <MudText>@document.DocumentName</MudText>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2">Document Type</MudText>
+                    <MudText>@document.DocumentType</MudText>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <MudButton Class="mt-4"
+                   Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   OnClick="GoBack">
+            Back to List
+        </MudButton>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private Domain.Entities.RequiredDocument? document;
+
+protected override async Task OnInitializedAsync()
+    {
+        document = await RequiredDocumentService.GetRequiredDocumentByIdAsync(Id);
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/requiredocuments");
+    }
+}

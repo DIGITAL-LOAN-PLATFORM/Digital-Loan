@@ -1,0 +1,390 @@
+@using Application.DTO
+@using Application.Interface
+@using Domain.Entities
+@using System.Threading
+@using Microsoft.AspNetCore.Components.Web
+
+@inject IPaymentService PaymentService
+@inject ILoanDisbursement LoanService
+@inject IPaymentTypeService PaymentTypeService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Payments" Class="mr-3 mb-n1" />
+            Process Loan Payment
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            @* 1. Search for Loan *@
+            <MudItem xs="12">
+                <MudAutocomplete T="LoanDisbursementDTO" 
+                                 Label="Search Loan (Ref No / Borrower)" 
+                                 Value="_selectedLoan"
+                                 SearchFunc="@SearchLoans"
+                                 ToStringFunc="@(l => l == null ? null : $"{l.ReferenceNumber} - {l.BorrowerName}")" 
+                                 Required="true" 
+                                 Variant="Variant.Outlined" 
+                                 AdornmentIcon="@Icons.Material.Filled.Search"
+                                 ValueChanged="@((LoanDisbursementDTO loan) => OnLoanSelected(loan))" />
+            </MudItem>
+
+            @* 2. Installment Breakdown Display *@
+            @if (_selectedLoan != null)
+            {
+                <MudItem xs="12">
+                    <MudPaper Class="pa-4" Elevation="0" Style="border-left: 6px solid #1976d2; background-color: #f0f7ff;">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-2"><b>Current Installment Details</b></MudText>
+                        <MudGrid>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption">Remaining Principal</MudText>
+                                <MudText Typo="Typo.body1"><b>@_selectedLoan.CurrentPrincipalBalance.ToString("N0") RWF</b></MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Color="Color.Error">Installment Interest</MudText>
+                                <MudText Typo="Typo.body1" Color="Color.Error"><b>@_selectedLoan.CurrentMonthInterest.ToString("N0") RWF</b></MudText>
+                            </MudItem>
+                            @if(_selectedLoan.NextInstallmentDueDate.HasValue)
+                            {
+                                <MudItem xs="12">
+                                    <MudText Typo="Typo.caption">Due Date: <b>@_selectedLoan.NextInstallmentDueDate.Value.ToString("dd MMM yyyy")</b></MudText>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    </MudPaper>
+                </MudItem>
+            }
+
+            @* 3. Payment Entry *@
+            <MudItem xs="6">
+                <MudNumericField Value="_model.TotalAmountPaid"
+                                 Label="Amount to Pay" 
+                                 Variant="Variant.Outlined" 
+                                 Format="N0" 
+                                 Min="1" 
+                                 Adornment="Adornment.Start" 
+                                 AdornmentText="RWF"
+                                 ValueChanged="@((decimal value) => OnAmountChanged(value))" />
+            </MudItem>
+
+            <MudItem xs="6">
+                @* Payment Type Dropdown *@
+                <MudSelect T="int" Label="Payment Method" @bind-Value="_model.PaymentTypeId" Variant="Variant.Outlined" Required="true">
+                    @if (_paymentTypes == null)
+                    {
+                        <MudSelectItem Value="0" Disabled="true">Loading...</MudSelectItem>
+                    }
+                    else
+                    {
+                        @foreach (var type in _paymentTypes)
+                        {
+                            <MudSelectItem Value="@type.Id">@type.Name</MudSelectItem>
+                        }
+                    }
+                </MudSelect>
+            </MudItem>
+
+            @* Payment Breakdown Preview *@
+            @if (_selectedLoan != null)
+            {
+                <MudItem xs="12">
+                    <MudPaper Class="pa-4" Elevation="0" Style="border-left: 6px solid #ffa500; background-color: #fff8f0;">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Warning" Class="mb-3"><b>Payment Breakdown</b></MudText>
+                        @if (_model.TotalAmountPaid > 0)
+                        {
+                            <MudGrid Spacing="2">
+                                <MudItem xs="12" sm="4">
+                                    <div Class="payment-breakdown-item">
+                                        <MudText Typo="Typo.caption" Class="breakdown-label">Interest</MudText>
+                                        <MudText Typo="Typo.body2" Style="color: #1976d2; font-weight: bold;">
+                                            @_paymentBreakdown.InterestAllocated.ToString("N0") RWF
+                                        </MudText>
+                                    </div>
+                                </MudItem>
+                                <MudItem xs="12" sm="4">
+                                    <div Class="payment-breakdown-item">
+                                        <MudText Typo="Typo.caption" Class="breakdown-label">Penalty</MudText>
+                                        <MudText Typo="Typo.body2" Style="color: #d32f2f; font-weight: bold;">
+                                            @_paymentBreakdown.PenaltyAllocated.ToString("N0") RWF
+                                        </MudText>
+                                    </div>
+                                </MudItem>
+                                <MudItem xs="12" sm="4">
+                                    <div Class="payment-breakdown-item">
+                                        <MudText Typo="Typo.caption" Class="breakdown-label">Principal</MudText>
+                                        <MudText Typo="Typo.body2" Style="color: #388e3c; font-weight: bold;">
+                                            @_paymentBreakdown.PrincipalAllocated.ToString("N0") RWF
+                                        </MudText>
+                                    </div>
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudDivider Class="my-2"/>
+                                    <div Class="payment-total-item">
+                                        <MudText Typo="Typo.subtitle1"><b>Total Amount</b></MudText>
+                                        <MudText Typo="Typo.h6" Color="Color.Warning">
+                                            <b>@_paymentBreakdown.GetTotal().ToString("N0") RWF</b>
+                                        </MudText>
+                                    </div>
+                                </MudItem>
+                            </MudGrid>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Default">
+                                Enter an amount above to see the payment breakdown
+                            </MudText>
+                        }
+                    </MudPaper>
+                </MudItem>
+            }
+
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_model.TransactionReference" Label="Reference (MoMo/Bank ID)" 
+                              Variant="Variant.Outlined" Placeholder="TXN-123456" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_model.Remarks" Label="Remarks" 
+                              Variant="Variant.Outlined" Lines="2" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" 
+                   OnClick="Submit" Disabled="@(_isProcessing || _model.PaymentTypeId == 0)">
+            @if (_isProcessing)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2"/>
+                <MudText>Processing...</MudText>
+            }
+            else
+            {
+                <MudText>Post Payment</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    
+    private PaymentCreateDTO _model = new() { PaymentDate = DateTime.Now, AccountId = 1 };
+    private LoanDisbursementDTO? _selectedLoan;
+    private List<PaymentType>? _paymentTypes; // Using the Domain Entity directly here
+    private bool _isProcessing = false;
+    
+    // Payment breakdown preview
+    private PaymentBreakdownDTO _paymentBreakdown = new();
+
+    private class PaymentBreakdownDTO
+    {
+        public decimal InterestAllocated { get; set; }
+        public decimal PenaltyAllocated { get; set; }
+        public decimal PrincipalAllocated { get; set; }
+        
+        public decimal GetTotal() => InterestAllocated + PenaltyAllocated + PrincipalAllocated;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Call your specific service method
+            _paymentTypes = await PaymentTypeService.GetAllPaymentTypesAsync();
+            
+            if (_paymentTypes != null && _paymentTypes.Any())
+            {
+                _model.PaymentTypeId = _paymentTypes.First().Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error loading payment types: " + ex.Message, Severity.Error);
+        }
+    }
+
+    private async Task<IEnumerable<LoanDisbursementDTO>> SearchLoans(string value, CancellationToken token)
+    {
+        if (token.IsCancellationRequested) return new List<LoanDisbursementDTO>();
+
+        try 
+        {
+            var loans = await LoanService.GetActiveLoansAsync();
+            if (loans == null) return new List<LoanDisbursementDTO>();
+
+            var dtos = loans.Select(l => {
+                var schedule = l.RepaymentSchedules?
+                                .Where(s => !s.IsPaid)
+                                .OrderBy(s => s.DueDate)
+                                .FirstOrDefault();
+
+                return new LoanDisbursementDTO { 
+                    Id = l.Id, 
+                    ReferenceNumber = l.ReferenceNumber ?? "",
+                    BorrowerName = l.LoanApplication?.Borrower != null 
+                        ? $"{l.LoanApplication.Borrower.FirstName} {l.LoanApplication.Borrower.LastName}" 
+                        : "N/A",
+                    PrincipalDisbursed = l.PrincipalDisbursed,
+                    InterestRate = l.InterestRate,
+                    CurrentPrincipalBalance = l.PrincipalBalance,
+                    CurrentMonthInterest = schedule?.InterestAmount ?? 0,
+                    NextInstallmentDueDate = schedule?.DueDate
+                };
+            }).ToList();
+
+            if (string.IsNullOrEmpty(value)) return dtos;
+            
+            return dtos.Where(x => x.ReferenceNumber.Contains(value, StringComparison.OrdinalIgnoreCase) || 
+                                   x.BorrowerName.Contains(value, StringComparison.OrdinalIgnoreCase))
+                       .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Search Error: {ex.Message}");
+            return new List<LoanDisbursementDTO>();
+        }
+    }
+
+    private async Task Submit()
+    {
+        if (_selectedLoan == null || _model.TotalAmountPaid <= 0 || _model.PaymentTypeId == 0)
+        {
+            Snackbar.Add("Please complete all required fields.", Severity.Warning);
+            return;
+        }
+
+        _isProcessing = true;
+        try 
+        {
+            _model.LoanDisbursementId = _selectedLoan.Id;
+            _model.CreatedBy = "SystemUser"; 
+
+            var success = await PaymentService.ProcessLoanPaymentAsync(_model);
+            
+            if (success) 
+            {
+                Snackbar.Add("Payment posted successfully.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("Failed to process payment.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally 
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void CalculatePaymentBreakdown()
+    {
+        _paymentBreakdown = new();
+
+        if (_selectedLoan == null || _model.TotalAmountPaid <= 0)
+            return;
+
+        decimal remainingAmount = _model.TotalAmountPaid;
+        decimal monthlyInterest = 0;
+
+        // Try to calculate monthly interest from rate
+        try
+        {
+            if (_selectedLoan.InterestRate > 0 && _selectedLoan.PrincipalDisbursed > 0)
+            {
+                monthlyInterest = (_selectedLoan.PrincipalDisbursed * _selectedLoan.InterestRate / 100) / 12;
+            }
+            else if (_selectedLoan.CurrentMonthInterest > 0)
+            {
+                monthlyInterest = _selectedLoan.CurrentMonthInterest;
+            }
+        }
+        catch
+        {
+            monthlyInterest = _selectedLoan.CurrentMonthInterest > 0 ? _selectedLoan.CurrentMonthInterest : 0;
+        }
+
+        // Ensure monthly interest is reasonable (not more than the amount being paid)
+        if (monthlyInterest > 0)
+        {
+            decimal interestToPay = Math.Min(remainingAmount, monthlyInterest);
+            _paymentBreakdown.InterestAllocated = Math.Round(interestToPay, 2);
+            remainingAmount -= interestToPay;
+        }
+
+        // Penalty allocation (placeholder)
+        _paymentBreakdown.PenaltyAllocated = 0;
+
+        // Principal gets the remainder
+        if (remainingAmount > 0 && _selectedLoan.CurrentPrincipalBalance > 0)
+        {
+            _paymentBreakdown.PrincipalAllocated = Math.Round(Math.Min(remainingAmount, _selectedLoan.CurrentPrincipalBalance), 2);
+        }
+        else if (remainingAmount > 0)
+        {
+            _paymentBreakdown.PrincipalAllocated = Math.Round(remainingAmount, 2);
+        }
+    }
+
+    private void OnAmountChanged(decimal value)
+    {
+        _model.TotalAmountPaid = value;
+        CalculatePaymentBreakdown();
+        StateHasChanged();
+    }
+
+    private void OnLoanSelected(LoanDisbursementDTO? loan)
+    {
+        _selectedLoan = loan;
+        // Recalculate breakdown when loan changes (in case amount was already entered)
+        if (_model.TotalAmountPaid > 0)
+        {
+            CalculatePaymentBreakdown();
+            StateHasChanged();
+        }
+    }
+}
+
+<style>
+    .payment-breakdown-item {
+        padding: 12px;
+        border-radius: 8px;
+        background-color: #fafafa;
+        text-align: center;
+    }
+
+    .breakdown-label {
+        display: block;
+        margin-bottom: 6px;
+        opacity: 0.7;
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.5px;
+    }
+
+    .payment-total-item {
+        padding: 16px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .payment-total-item > :first-child {
+        flex: 1;
+    }
+
+    .payment-total-item > :last-child {
+        text-align: right;
+        flex: 1;
+    }
+</style>

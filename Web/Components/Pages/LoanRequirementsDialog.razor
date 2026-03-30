@@ -1,0 +1,203 @@
+@using Application.DTO
+@using Application.Services
+@using Application.Services.LoanRequirements
+@using Application.Services.RequiredDocuments
+@using Domain.Entities
+@using MudBlazor
+
+@inject ILoanRequirementsService RequirementsService
+@inject ILoanProductService ProductService
+@inject IRequiredDocumentService DocumentService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@(IsEditMode ? Icons.Material.Filled.Edit : Icons.Material.Filled.Add)" Class="mr-2 mb-1"/>
+            @(IsEditMode ? "Update Loan Requirement" : "New Loan Requirement")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField T="string" 
+                                  Label="Requirement Name" 
+                                  Required="true"
+                                  RequiredError="Name is required"
+                                  @bind-Value="RequirementName" 
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSelect T="int" 
+                               Label="Loan Product" 
+                               @bind-Value="ProductId"
+                               Required="true"
+                               RequiredError="Product is required"
+                               Variant="Variant.Outlined">
+                        @foreach (var product in Products)
+                        {
+                            <MudSelectItem T="int" Value="@product.Id">@product.ProductName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSelect T="int" 
+                               Label="Required Document" 
+                               @bind-Value="DocumentId"
+                               Required="true"
+                               RequiredError="Document is required"
+                               Variant="Variant.Outlined">
+                        @foreach (var doc in Documents)
+                        {
+                            <MudSelectItem T="int" Value="@doc.Id">@doc.DocumentName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudCheckBox T="bool" 
+                                 Label="Mandatory Requirement" 
+                                 @bind-Checked="IsMandatory" 
+                                 Color="Color.Primary" />
+                </MudItem>
+                @if (IsEditMode)
+                {
+                    <MudItem xs="12" md="6">
+                        <MudCheckBox T="bool" 
+                                     Label="Active" 
+                                     @bind-Checked="IsActive" 
+                                     Color="Color.Primary" />
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Disabled="@_processing">
+            @(_processing ? "Processing..." : (IsEditMode ? "Update" : "Create"))
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance? DialogInstance { get; set; }
+    [Parameter] public int? RequirementId { get; set; }
+    [Parameter] public CreateLoanRequirementsDTO? CreateModel { get; set; }
+    [Parameter] public UpdateLoanRequirementsDTO? UpdateModel { get; set; }
+
+    private MudForm? form;
+    private bool _processing = false;
+    private bool IsEditMode => RequirementId.HasValue && RequirementId > 0;
+
+    // Properties to bind to form fields
+    private string RequirementName { get; set; } = string.Empty;
+    private int ProductId { get; set; }
+    private int DocumentId { get; set; }
+    private bool IsMandatory { get; set; } = true;
+    private bool IsActive { get; set; } = true;
+
+    // Lists for dropdowns
+    private List<LoanProduct> Products = new();
+    private List<RequiredDocument> Documents = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Load products and documents
+            Products = (await ProductService.GetAllLoanProductsAsync())?.ToList() ?? new();
+            Documents = (await DocumentService.GetAllRequiredDocumentsAsync())?.ToList() ?? new();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+        }
+
+        // Initialize form fields from model
+        if (IsEditMode && UpdateModel != null)
+        {
+            RequirementName = UpdateModel.Name;
+            ProductId = UpdateModel.LoanProductId;
+            DocumentId = UpdateModel.RequiredDocumentId;
+            IsMandatory = UpdateModel.IsMandatory;
+            IsActive = UpdateModel.IsActive;
+        }
+        else if (CreateModel != null)
+        {
+            RequirementName = CreateModel.Name;
+            ProductId = CreateModel.LoanProductId;
+            DocumentId = CreateModel.RequiredDocumentId;
+            IsMandatory = CreateModel.IsMandatory;
+        }
+    }
+
+    private async Task Submit()
+    {
+        if (form == null) return;
+        await form.Validate();
+        if (!form.IsValid) return;
+
+        _processing = true;
+        try
+        {
+            bool success;
+
+            if (IsEditMode)
+            {
+                var updateDto = new UpdateLoanRequirementsDTO
+                {
+                    Id = RequirementId!.Value,
+                    Name = RequirementName,
+                    LoanProductId = ProductId,
+                    RequiredDocumentId = DocumentId,
+                    IsMandatory = IsMandatory,
+                    IsActive = IsActive
+                };
+                success = await RequirementsService.UpdateRequirementAsync(RequirementId!.Value, updateDto);
+                if (success)
+                {
+                    Snackbar.Add("Requirement updated successfully!", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add("Error: Failed to update requirement.", Severity.Warning);
+                }
+            }
+            else
+            {
+                var createDto = new CreateLoanRequirementsDTO
+                {
+                    Name = RequirementName,
+                    LoanProductId = ProductId,
+                    RequiredDocumentId = DocumentId,
+                    IsMandatory = IsMandatory
+                };
+                success = await RequirementsService.CreateRequirementAsync(createDto);
+                if (success)
+                {
+                    Snackbar.Add("Requirement created successfully!", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add("Error: Requirement name might already exist.", Severity.Warning);
+                }
+            }
+
+            if (success)
+            {
+                DialogInstance?.Close(DialogResult.Ok(true));
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally 
+        { 
+            _processing = false; 
+        }
+    }
+
+    private void Cancel() => DialogInstance?.Cancel();
+}

@@ -114,6 +114,7 @@ namespace Application.Services.LoanApplications
                 ApplicationNumber = app.ApplicationNumber,
                 loanProductId = app.loanProductId,
                 ProductName = app.loanProduct?.ProductName ?? "Unknown",
+                ProductInterestRate = app.loanProduct?.InterestRate,
                 BorrowerId = app.BorrowerId,
                 BorrowerName = app.Borrower != null ? $"{app.Borrower.FirstName} {app.Borrower.LastName}" : $"ID: {app.BorrowerId}",
                 paymentModalityId = app.paymentModalityId,

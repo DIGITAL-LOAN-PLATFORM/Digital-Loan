@@ -66,24 +66,61 @@
                         </MudTable>
                     </MudTabPanel>
 
-                    <MudTabPanel Text="Documents" Icon="@Icons.Material.Filled.Description">
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-4">
-                            <MudText Typo="Typo.h6">Required Documents</MudText>
-                            <MudFileUpload T="IBrowserFile" FilesChanged="UploadDocument">
-                                <ActivatorContent>
-                                    <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.CloudUpload">Upload</MudButton>
-                                </ActivatorContent>
-                            </MudFileUpload>
-                        </MudStack>
-                        <MudList T="string">
-                            @foreach (var doc in Loan.ProvidedDocuments)
-                            {
-                                <MudListItem Text="@doc.DocumentName" Icon="@Icons.Material.Filled.InsertDriveFile">
-                                    <SecondaryText>@doc.DocumentFile</SecondaryText>
-                                </MudListItem>
-                            }
-                        </MudList>
-                    </MudTabPanel>
+                   <MudTabPanel Text="Documents" Icon="@Icons.Material.Filled.Description">
+    <MudGrid>
+        @* Left Side: The Requirements based on the Loan Product *@
+        <MudItem xs="12" md="5">
+            <MudText Typo="Typo.h6" Class="mb-3">Loan Requirements</MudText>
+            <MudPaper Outlined="true" Class="pa-4">
+                <MudList T="string">
+                    @if (Loan.RequiredDocuments != null && Loan.RequiredDocuments.Any())
+                    {
+                        @foreach (var req in Loan.RequiredDocuments)
+                        {
+                            var isUploaded = Loan.ProvidedDocuments.Any(d => d.RequiredDocumentId == req.Id);
+                            <MudListItem Icon="@(isUploaded ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.RadioButtonUnchecked)" 
+                                         IconColor="@(isUploaded ? Color.Success : Color.Default)">
+                                <MudText Color="@(isUploaded ? Color.Success : Color.Default)">@req.DocumentName</MudText>
+                            </MudListItem>
+                        }
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">No specific requirements defined for this product.</MudText>
+                    }
+                </MudList>
+            </MudPaper>
+        </MudItem>
+
+        @* Right Side: The actual uploaded files *@
+        <MudItem xs="12" md="7">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-4">
+                <MudText Typo="Typo.h6">Provided Document</MudText>
+                @* Using your existing Upload Logic button *@
+                
+            </MudStack>
+
+            <MudTable Items="@Loan.ProvidedDocuments" Hover="true" Dense="true" Elevation="0" Outlined="true">
+                <HeaderContent>
+                    <MudTh>Document Name</MudTh>
+                    <MudTh>File Name</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Action</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.DocumentName</MudTd>
+                    <MudTd>@context.FileName</MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info">@context.Status</MudChip>
+                    </MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Download" Size="Size.Small" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudItem>
+    </MudGrid>
+</MudTabPanel>
 
                     <MudTabPanel Text="History" Icon="@Icons.Material.Filled.History">
                         <MudText Typo="Typo.body1">Status: @Loan.Status</MudText>

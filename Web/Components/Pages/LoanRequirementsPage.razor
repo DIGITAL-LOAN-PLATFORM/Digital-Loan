@@ -1,0 +1,150 @@
+@page "/loans/requirements"
+@using Application.DTO
+@using Application.Services.LoanRequirements
+@using MudBlazor
+@inject ILoanRequirementsService RequirementsService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavManager
+
+<PageTitle>Loan Requirements</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Loan Requirements</MudText>
+
+<MudTable Items="@Requirements" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Elevation="2">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Manage Requirements</MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Add" 
+                   OnClick="OpenCreateDialog">
+            Add Requirement
+        </MudButton>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Requirement Name</MudTh>
+        <MudTh>Product</MudTh>
+        <MudTh>Document</MudTh>
+        <MudTh>Mandatory</MudTh>
+        <MudTh>Active</MudTh>
+        <MudTh>Created Date</MudTh>
+        <MudTh Style="text-align:right">Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Name"><b>@context.Name</b></MudTd>
+        <MudTd DataLabel="Product">@context.ProductName</MudTd>
+        <MudTd DataLabel="Document">@context.DocumentName</MudTd>
+        <MudTd DataLabel="Mandatory">
+            <MudChip T="string" Color="@(context.IsMandatory ? Color.Success : Color.Warning)" Size="Size.Small">
+                @(context.IsMandatory ? "Yes" : "No")
+            </MudChip>
+        </MudTd>
+        <MudTd DataLabel="Active">
+            <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Error)" Size="Size.Small">
+                @(context.IsActive ? "Active" : "Inactive")
+            </MudChip>
+        </MudTd>
+        <MudTd DataLabel="Created">@context.CreatedAt.ToShortDateString()</MudTd>
+        <MudTd Style="text-align:right">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                           Color="Color.Info" 
+                           Size="Size.Small" 
+                           OnClick="@(() => OpenEditDialog(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                           Color="Color.Error" 
+                           Size="Size.Small" 
+                           OnClick="@(() => DeleteRequirement(context.Id))" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>No requirements found.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private IEnumerable<LoanRequirementsDTO> Requirements = new List<LoanRequirementsDTO>();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        try 
+        { 
+            Requirements = await RequirementsService.GetAllRequirementsAsync() ?? new List<LoanRequirementsDTO>();
+        }
+        catch (Exception ex) 
+        { 
+            Snackbar.Add($"Error loading requirements: {ex.Message}", Severity.Error); 
+        }
+        finally 
+        { 
+            _loading = false; 
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters 
+        { 
+            ["RequirementId"] = null,
+            ["CreateModel"] = new CreateLoanRequirementsDTO()
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<LoanRequirementsDialog>("Add Loan Requirement", parameters, options);
+        var result = await dialog.Result;
+        if (!result!.Canceled) await LoadData();
+    }
+
+    private async Task OpenEditDialog(LoanRequirementsDTO requirement)
+    {
+        var parameters = new DialogParameters 
+        { 
+            ["RequirementId"] = requirement.Id,
+            ["UpdateModel"] = new UpdateLoanRequirementsDTO
+            {
+                Id = requirement.Id,
+                Name = requirement.Name,
+                LoanProductId = requirement.LoanProductId,
+                RequiredDocumentId = requirement.RequiredDocumentId,
+                IsMandatory = requirement.IsMandatory,
+                IsActive = requirement.IsActive
+            }
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<LoanRequirementsDialog>("Update Loan Requirement", parameters, options);
+        var result = await dialog.Result;
+        if (!result!.Canceled) await LoadData();
+    }
+
+    private async Task DeleteRequirement(int id)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            "Are you sure you want to delete this requirement?",
+            yesText: "Delete", noText: "Cancel");
+
+        if (result == true)
+        {
+            try
+            {
+                var success = await RequirementsService.DeleteRequirementAsync(id);
+                if (success)
+                {
+                    Snackbar.Add("Requirement deleted successfully", Severity.Success);
+                    await LoadData();
+                }
+                else
+                {
+                    Snackbar.Add("Failed to delete requirement", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}

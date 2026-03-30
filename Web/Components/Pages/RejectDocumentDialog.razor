@@ -1,0 +1,62 @@
+@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Cancel" Class="mr-3 mb-n1" />
+            Reject Document
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="Severity.Warning" Dense="true">
+                Please provide a reason for rejecting this document. The borrower will be notified.
+            </MudAlert>
+            
+            <MudTextField @bind-Value="Remarks"
+                          Label="Rejection Reason"
+                          Variant="Variant.Outlined"
+                          Lines="4"
+                          Placeholder="e.g., Document is blurry, missing information, expired, etc."
+                          Required="true"
+                          Validation="@(new Func<string, IEnumerable<string>>(ValidateRemarks))" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="Submit">
+            Reject Document
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter]
+    public int DocumentId { get; set; }
+    
+    private string Remarks = string.Empty;
+
+    private IEnumerable<string> ValidateRemarks(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            yield return "Rejection reason is required";
+        else if (value.Length < 10)
+            yield return "Please provide at least 10 characters";
+        else if (value.Length > 500)
+            yield return "Rejection reason cannot exceed 500 characters";
+    }
+
+    private void Submit()
+    {
+        if (string.IsNullOrWhiteSpace(Remarks))
+        {
+            return;
+        }
+        
+        MudDialog.Close(DialogResult.Ok(Remarks));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

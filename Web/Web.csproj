@@ -8,14 +8,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Hangfire" Version="1.8.23" />
+    <PackageReference Include="Hangfire.SqlServer" Version="1.8.23" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.0" />
-    <PackageReference Include="MudBlazor" Version="9.2.0" />
+    <PackageReference Include="MudBlazor" Version="7.3.0" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Core\Application\Application.csproj" />
-    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\Core\Domain\Domain.csproj" />
+     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+
   </ItemGroup>
 
   <ItemGroup>
