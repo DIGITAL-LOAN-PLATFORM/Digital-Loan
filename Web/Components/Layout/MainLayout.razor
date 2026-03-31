@@ -14,7 +14,7 @@
 <MudLayout>
     <MudAppBar Elevation="0" Dense="true">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-        <MudText Typo="Typo.h6" Class="ml-2">Room Allocation Management</MudText>
+        <MudText Typo="Typo.h6" Class="ml-2">Digital Loan Management</MudText>
 
         <MudSpacer />
         <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" 
@@ -120,7 +120,11 @@
     {
         _drawerOpen = !_drawerOpen;
     }
-<<<<<<< HEAD
+
+    void ToggleTheme()
+    {
+        _isDarkMode = !_isDarkMode;
+    }
 }
 
 
@@ -152,16 +156,4 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div> *@
-=======
 
-    void ToggleTheme()
-    {
-        _isDarkMode = !_isDarkMode;
-    }
-
-    private void HandleLogout()
-    {
-        Navigation.NavigateTo("/account/logout", forceLoad: true);
-    }
-}
->>>>>>> 8b26a51bdf784e04111b2993293fca12b6772dcf

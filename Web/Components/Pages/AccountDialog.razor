@@ -1,3 +1,4 @@
+@using MudBlazor
 @using Application.Interfaces
 @using Domain.Entities
 @using Domain.ValueObjects
@@ -7,80 +8,63 @@
 
 <MudDialog>
     <DialogContent>
-        <MudForm @ref="_form" @bind-IsValid="_success" ValidationDelay="0">
+        <MudForm @ref="_form" ValidationDelay="0">
             <MudGrid>
                 <MudItem xs="12" md="6">
-                    <MudTextField @bind-Value="Model.Name" Label="Account Name" Required="true" ReadOnly="IsReadOnly" />
+                    <MudTextField @bind-Value="Model.Name" Label="Account Name" Required="true" Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12" md="6">
-                    <MudTextField @bind-Value="Model.Provider" Label="Provider" Required="true" ReadOnly="IsReadOnly" />
+                    <MudTextField @bind-Value="Model.Provider" Label="Provider" Required="true" Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12" md="6">
-                    <MudTextField @bind-Value="Model.Number" Label="Account Number" Required="true" ReadOnly="IsReadOnly" />
+                    <MudTextField @bind-Value="Model.Number" Label="Account Number" Required="true" Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12" md="6">
-                    @if (IsReadOnly)
-                    {
-                        <MudTextField @bind-Value="_accountTypeDisplay" Label="Account Type" ReadOnly="true" Required="true" />
-                    }
-                    else
-                    {
-                        <MudSelect @bind-Value="_accountTypeValue" Label="Account Type" Required="true">
-                            @foreach (var accountType in Enum.GetValues<AccountType>())
-                            {
-                                <MudSelectItem Value="@((int)accountType)">@accountType.ToString()</MudSelectItem>
-                            }
-                        </MudSelect>
-                    }
+                    @* Added T="int" to ensure the select matches the backing field type *@
+                    <MudSelect T="int" @bind-Value="_accountTypeValue" Label="Account Type" Required="true" Variant="Variant.Outlined">
+                        @foreach (var item in Enum.GetValues<AccountType>())
+                        {
+                            <MudSelectItem T="int" Value="@((int)item)">@item.ToString()</MudSelectItem>
+                        }
+                    </MudSelect>
                 </MudItem>
                 <MudItem xs="12" md="6">
-                    <MudNumericField @bind-Value="Model.Balance" Label="Balance" Required="true" ReadOnly="IsReadOnly" />
+                    <MudNumericField @bind-Value="Model.Balance" Label="Balance" Required="true" Variant="Variant.Outlined" />
                 </MudItem>
             </MudGrid>
         </MudForm>
     </DialogContent>
     <DialogActions>
-        @if (!IsReadOnly)
-        {
-            <MudButton OnClick="@SaveAsync">Save</MudButton>
-        }
-        <MudButton OnClick="@Close">Close</MudButton>
+        <MudButton OnClick="Close">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveAsync">Save Account</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    [CascadingParameter] 
-    private IMudDialogInstance MudDialog { get; set; } = default!;
-
-    [Parameter]
-    public CreateAccountDTO Model { get; set; } = new CreateAccountDTO();
-
-    [Parameter]
-    public int AccountId { get; set; } = 0;
-
-    [Parameter]
-    public bool IsReadOnly { get; set; } = false;
+    [CascadingParameter] MudDialogInstance Dialog { get; set; } = null!;
+    
+    [Parameter] public CreateAccountDTO Model { get; set; } = new();
+    [Parameter] public int AccountId { get; set; } = 0;
+    [Parameter] public bool IsReadOnly { get; set; } = false;
 
     private MudForm _form = default!;
-    private bool _success;
     private int _accountTypeValue;
-    private string _accountTypeDisplay = string.Empty;
 
     protected override void OnInitialized()
     {
-        if (Model != null)
-        {
-            _accountTypeValue = (int?)Model.Type ?? 0;
-            _accountTypeDisplay = ((AccountType)_accountTypeValue).ToString();
-        }
+        // Sync the internal int value with the model type on load
+        _accountTypeValue = (int)Model.Type;
     }
 
     private async Task SaveAsync()
     {
-        await _form.ValidateAsync();
-        if (_form.IsValid)
+        await _form.Validate();
+        if (!_form.IsValid) return;
+
+        Model.Type = _accountTypeValue;
+
+        try 
         {
-            Model.Type = _accountTypeValue;
             if (AccountId == 0)
             {
                 await AccountService.CreateAccountAsync(Model);
@@ -98,12 +82,15 @@
                 };
                 await AccountService.UpdateAccountAsync(updateDto);
             }
-            MudDialog.Close(DialogResult.Ok(true));
+            // Return true so the parent page knows to refresh the list
+            Dialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception)
+        {
+            // Ideally, log this or show a local error
+            Dialog.Close(DialogResult.Ok(false));
         }
     }
 
-    private void Close()
-    {
-        MudDialog.Cancel();
-    }
+    private void Close() => Dialog.Cancel();
 }

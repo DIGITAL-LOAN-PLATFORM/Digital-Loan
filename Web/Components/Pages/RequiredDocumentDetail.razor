@@ -44,9 +44,9 @@
 
     private Domain.Entities.RequiredDocument? document;
 
-    protected override void OnInitialized()
+protected override async Task OnInitializedAsync()
     {
-        document = RequiredDocumentService.GetRequiredDocumentById(Id);
+        document = await RequiredDocumentService.GetRequiredDocumentByIdAsync(Id);
     }
 
     private void GoBack()

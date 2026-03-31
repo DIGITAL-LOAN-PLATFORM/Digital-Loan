@@ -1,15 +1,16 @@
-using Domain.Entities;
 using Application.DTO;
 
 namespace Application.Interface
 {
     public interface IPaymentService
     {
-        Task<Payment?> GetByIdAsync(int id);
-        Task<List<Payment>> GetAllPaymentsAsync();
-        Task<List<Payment>> GetPaymentsByLoanDisbursementIdAsync(int loanDisbursementId);
-        Task CreatePaymentAsync(CreatePaymentDTO paymentDto);
-        Task UpdatePaymentAsync(int id, UpdatePaymentDTO paymentDto);
-        Task DeletePaymentAsync(int id);
+        Task<PaymentDTO?> GetPaymentByIdAsync(int id);
+        Task<IEnumerable<PaymentDTO>> GetPaymentsByLoanIdAsync(int loanId);
+        
+        // This is the core method for the Waterfall logic
+        Task<bool> ProcessLoanPaymentAsync(PaymentCreateDTO paymentDto);
+        
+        Task<bool> UpdatePaymentDetailsAsync(PaymentUpdateDTO updateDto);
+        Task<IEnumerable<PaymentDTO>> GetAllPaymentsAsync();
     }
 }

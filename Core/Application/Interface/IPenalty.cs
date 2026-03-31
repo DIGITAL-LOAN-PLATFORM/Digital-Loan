@@ -1,15 +1,20 @@
 using Domain.Entities;
-using Application.DTO;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace Application.Interface
+namespace Domain.Interface
 {
     public interface IPenalty
     {
         Task<Penalty?> GetByIdAsync(int id);
-        Task<List<Penalty>> GetAllPenaltiesAsync();
-        Task<List<Penalty>> GetPenaltiesByLoanDisbursementIdAsync(int loanDisbursementId);
-        Task CreatePenaltyAsync(CreatePenaltyDTO penaltyDto);
-        Task UpdatePenaltyAsync(int id, UpdatePenaltyDTO penaltyDto);
-        Task DeletePenaltyAsync(int id);
+        Task<IEnumerable<Penalty>> GetByLoanIdAsync(int loanDisbursementId);
+        Task<IEnumerable<Penalty>> GetUnpaidPenaltiesByLoanIdAsync(int loanDisbursementId);
+        Task<bool> AddAsync(Penalty penalty);
+        Task<bool> UpdateAsync(Penalty penalty);
+        Task<bool> PenaltyExistsForDateAsync(int loanDisbursementId, DateTime eventDate);
+
+        // FIX: Change DTO to Entity here
+        Task<IEnumerable<RepaymentScheduleItem>> GetNewlyOverdueInstallmentsAsync();
     }
 }

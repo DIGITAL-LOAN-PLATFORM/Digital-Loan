@@ -1,0 +1,90 @@
+@page "/loans/disbursement-details/{Id:int}"
+@using Application.DTO
+@using Application.Interfaces
+@inject ILoanDisbursementService DisbursementService
+@inject NavigationManager NavManager
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <MudLink OnClick="@(() => NavManager.NavigateTo("/loans/disbursements"))" Style="cursor:pointer" Class="mb-4 d-flex align-center">
+        <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" Class="mr-1"/> Back to Disbursements
+    </MudLink>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-6" />
+    }
+    else if (Data == null)
+    {
+        <MudAlert Severity="Severity.Error">Disbursement record not found.</MudAlert>
+    }
+    else
+    {
+        <MudGrid>
+            @* Left Column: Loan Summary Card *@
+            <MudItem xs="12" md="4">
+                <MudCard Elevation="4">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Loan Snapshot</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudList T="string" Dense="true">
+                            <MudListItem Text="@($"App Ref: {Data.ApplicationNumber}")" Icon="@Icons.Material.Filled.Numbers" />
+                            <MudListItem Text="@($"Borrower: {Data.BorrowerName}")" Icon="@Icons.Material.Filled.Person" />
+                            <MudListItem Text="@($"Principal: {Data.PrincipalDisbursed:N0} RWF")" Icon="@Icons.Material.Filled.AttachMoney" />
+                            <MudListItem Text="@($"Rate: {Data.InterestRate}%")" Icon="@Icons.Material.Filled.Percent" />
+                            <MudListItem Text="@($"Disbursed: {Data.DisbursementDate:dd MMM yyyy}")" Icon="@Icons.Material.Filled.Event" />
+                            <MudListItem Text="@($"Maturity: {Data.MaturityDate:dd MMM yyyy}")" Icon="@Icons.Material.Filled.Flag" />
+                        </MudList>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            @* Right Column: Amortization Schedule Table *@
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-4" Elevation="4">
+                    <MudText Typo="Typo.h6" Class="mb-4">Repayment Schedule</MudText>
+                    <MudTable Items="@Data.RepaymentSchedule" Hover="true" Dense="true" FixedHeader="true" Height="400px">
+                        <HeaderContent>
+                            <MudTh>Inst. #</MudTh>
+                            <MudTh>Due Date</MudTh>
+                            <MudTh>Principal</MudTh>
+                            <MudTh>Interest</MudTh>
+                            <MudTh>Total To Pay</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Inst. #">@context.InstallmentNumber</MudTd>
+                            <MudTd DataLabel="Due Date">@context.DueDate.ToString("dd MMM yyyy")</MudTd>
+                            <MudTd DataLabel="Principal">@context.PrincipalAmount.ToString("N0")</MudTd>
+                            <MudTd DataLabel="Interest">@context.InterestAmount.ToString("N0")</MudTd>
+                            <MudTd DataLabel="Total"><b>@context.TotalAmount.ToString("N0") RWF</b></MudTd>
+                        </RowTemplate>
+                        <FooterContent>
+                            <MudTFootRow>
+                                <MudTd colspan="2"><b>Totals:</b></MudTd>
+                                <MudTd><b>@Data.PrincipalDisbursed.ToString("N0")</b></MudTd>
+                                <MudTd><b>@Data.RepaymentSchedule.Sum(x => x.InterestAmount).ToString("N0")</b></MudTd>
+                                <MudTd><b>@Data.RepaymentSchedule.Sum(x => x.TotalAmount).ToString("N0")</b></MudTd>
+                            </MudTFootRow>
+                        </FooterContent>
+                    </MudTable>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private LoanDisbursementDTO? Data;
+    private bool _loading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        // This method in your Service calculates the maturity shift and schedule
+        Data = await DisbursementService.GetDisbursementByIdAsync(Id);
+        _loading = false;
+    }
+}

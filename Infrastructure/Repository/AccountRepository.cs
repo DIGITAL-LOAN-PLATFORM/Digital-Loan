@@ -4,7 +4,7 @@ using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Application.DTO;
 
-namespace Infrastructure.Repositories
+namespace Infrastructure.Repository
 {
     public class AccountRepository : IAccount
     {

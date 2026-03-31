@@ -46,27 +46,29 @@
 
 @code 
 {
-    bool disabled = false;
     List<PaymentModality> paymentmodalities = new List<PaymentModality>();
 
-    
     protected override async Task OnInitializedAsync()
     {
-        
         paymentmodalities = await PaymentModalityService.GetAllPaymentModalitiesAsync();
     }
 
-    private async Task OpenDialog(GuarantorType? guarantortype = null)
+    private async Task OpenDialog()
     {
-        var dialog = await DialogService.ShowAsync<PaymentModalityDialog>("Add PaymentModality");
+        // 1. Initialize the DTO
+        var parameters = new DialogParameters<PaymentModalityDialog>
+        {
+            { x => x.Model, new UpdatePaymentModalityDTO { Id = 0, Modality = "" } }
+        };
+
+        // 2. Pass parameters to the dialog
+        var dialog = await DialogService.ShowAsync<PaymentModalityDialog>("Add Payment Modality", parameters);
         var result = await dialog.Result;
         
         if (result != null && !result.Canceled)
         {
-            
+            // Refresh list
             paymentmodalities = await PaymentModalityService.GetAllPaymentModalitiesAsync();
-            
-            
             StateHasChanged();
         }
     }

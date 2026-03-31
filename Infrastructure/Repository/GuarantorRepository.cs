@@ -1,5 +1,5 @@
 using Domain.Entities;
-using Application.Interfaces;
+using Application.Interface;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -36,17 +36,39 @@ namespace Infrastructure.Repositories
                 .FirstOrDefaultAsync(g => g.IdentificationNumber == idNumber);
         }
 
+        public async Task<IEnumerable<Guarantor>> GetAllAsync()
+        {
+            return await _context.Guarantors
+                .Include(g => g.GuarantorType)
+                .Include(g => g.LoanApplication)
+                .ToListAsync();
+        }
+
         public async Task<Guarantor> AddAsync(Guarantor guarantor)
         {
-            await _context.Guarantors.AddAsync(guarantor);
-            await _context.SaveChangesAsync();
-            return guarantor;
+            try
+            {
+                await _context.Guarantors.AddAsync(guarantor);
+                await _context.SaveChangesAsync();
+                return guarantor;
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Failed to add guarantor: {ex.InnerException?.Message}", ex);
+            }
         }
 
         public async Task UpdateAsync(Guarantor guarantor)
         {
-            _context.Entry(guarantor).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            try
+            {
+                _context.Entry(guarantor).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Failed to update guarantor: {ex.InnerException?.Message}", ex);
+            }
         }
 
         public async Task DeleteAsync(int id)
@@ -67,3 +89,4 @@ namespace Infrastructure.Repositories
         }
     }
 }
+

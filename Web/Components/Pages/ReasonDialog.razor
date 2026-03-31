@@ -6,15 +6,15 @@
 @inject ISnackbar Snackbar
 @inject IReasonService ReasonService
 
-<MudDialog>
+<MudDialog T="bool">
     <TitleContent>
         <MudText Typo="Typo.h6">
-            <MudIcon Icon="@(ReasonId == 0 ? Icons.Material.Filled.Add : Icons.Material.Filled.Edit)" Class="mr-2 mb-1"/>
-            @(ReasonId == 0 ? "Add Reason" : "Update Reason")
+            <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2 mb-1"/>
+            Add Reason
         </MudText>
     </TitleContent>
     <DialogContent>
-        <MudForm @ref="form">
+        <MudForm @ref="form" @bind-IsValid="success">
             <MudGrid>
                 <MudItem xs="12">
                     <MudTextField T="string" Label="Reason Name" Required="true" @bind-Value="_model.Name" />
@@ -31,18 +31,19 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [CascadingParameter] public MudDialogInstance Dialog { get; set; } = default!;
     [Parameter] public int ReasonId { get; set; } = 0;
 
     private MudForm? form;
+    private bool success;
     private bool _processing = false;
     private CreateReasonDTO _model = new();
 
     private async Task Submit()
     {
         if (form == null) return;
-        await form.ValidateAsync();
-        if (!form.IsValid) return;
+        await form.Validate();
+            if (!success) return;
 
         _processing = true;
         try
@@ -57,11 +58,11 @@
                 await ReasonService.UpdateReasonAsync(ReasonId, new UpdateReasonDTO { Name = _model.Name });
                 Snackbar.Add("Reason updated successfully", Severity.Success);
             }
-            MudDialog.Close(DialogResult.Ok(true));
+            Dialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); }
         finally { _processing = false; }
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private void Cancel() => Dialog.Cancel();
 }

@@ -1,84 +1,166 @@
 @page "/penalties"
+@using Application.DTO
 @using Application.Interface
-@using Domain.Entities
+@using Application.Interfaces
 @using MudBlazor
 @inject IPenaltyService PenaltyService
-@inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
-<PageTitle>Penalties</PageTitle>
-<MudText Typo="Typo.h4" Class="mb-4">Penalties</MudText>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-6">
+        <MudText Typo="Typo.h4">Penalty Management</MudText>
+        <MudStack Row="true">
+            <MudTextField @bind-Value="_searchString" Placeholder="Search Remarks..." 
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" 
+                          IconSize="Size.Medium" Class="mt-0" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense"></MudTextField>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RefreshData" 
+                       StartIcon="@Icons.Material.Filled.Refresh">Refresh</MudButton>
+        </MudStack>
+    </MudStack>
 
-<MudTable Items="@_penalties" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Elevation="2">
-    <ToolBarContent>
-        <MudText Typo="Typo.h6">All Penalties</MudText>
-        <MudSpacer />
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add">
-            Add Penalty
-        </MudButton>
-    </ToolBarContent>
-    <HeaderContent>
-        <MudTh>ID</MudTh>
-        <MudTh>Loan Disbursement</MudTh>
-        <MudTh>Penalty Amount</MudTh>
-        <MudTh>Reason</MudTh>
-        <MudTh>Confirmed By</MudTh>
-        <MudTh>Created At</MudTh>
-        <MudTh>Actions</MudTh>
-    </HeaderContent>
-    <RowTemplate>
-        <MudTd DataLabel="ID">@context.Id</MudTd>
-        <MudTd DataLabel="Loan Disbursement">@context.LoanDisbursementId</MudTd>
-        <MudTd DataLabel="Penalty Amount">@context.PenaltyAmount.ToString("N2")</MudTd>
-        <MudTd DataLabel="Reason">@context.PenaltyReason?.Name</MudTd>
-        <MudTd DataLabel="Confirmed By">@context.ConfirmedByUserId</MudTd>
-        <MudTd DataLabel="Created At">@context.CreatedAt.ToString("dd/MM/yyyy")</MudTd>
-        <MudTd>
-            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" OnClick="@(() => OpenUpdateDialog(context))" />
-            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeletePenalty(context.Id))" />
-        </MudTd>
-    </RowTemplate>
-</MudTable>
+    <MudGrid Class="mb-6">
+        <MudItem xs="12" sm="4">
+            <MudPaper Class="pa-4 border-l-4 border-warning" Elevation="1">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Total Charged</MudText>
+                <MudText Typo="Typo.h6">@_penalties.Sum(x => x.PenaltyAmount).ToString("N0") RWF</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudPaper Class="pa-4 border-l-4 border-success" Elevation="1">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Total Collected</MudText>
+                <MudText Typo="Typo.h6">@_penalties.Sum(x => x.AmountPaid).ToString("N0") RWF</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudPaper Class="pa-4 border-l-4 border-error" Elevation="1">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Outstanding Balance</MudText>
+                <MudText Typo="Typo.h6" Color="Color.Error">@_penalties.Sum(x => x.CurrentBalance).ToString("N0") RWF</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudGrid>
+        @if (_loading)
+        {
+            @for (int i = 0; i < 6; i++)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="200px" />
+                </MudItem>
+            }
+        }
+        else if (!_filteredPenalties.Any())
+        {
+            <MudItem xs="12">
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" ContentAlignment="HorizontalAlignment.Center">
+                    No penalty records found matching your search.
+                </MudAlert>
+            </MudItem>
+        }
+        else
+        {
+            @foreach (var penalty in _filteredPenalties)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudPaper Class="pa-4 mud-height-full" Elevation="2" Outlined="true">
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.subtitle2" Color="Color.Primary">@penalty.EventDate.ToString("dd MMM yyyy")</MudText>
+                                <MudChip T="string" Color="@GetStatusColor(penalty.Status)" Size="Size.Small" Variant="Variant.Filled">@penalty.Status</MudChip>
+                            </MudStack>
+
+                            <MudDivider />
+
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary" Style="height: 40px; overflow: hidden;">@penalty.Remarks</MudText>
+
+                            <MudGrid Spacing="1" Class="mt-2">
+                                <MudItem xs="4">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Total</MudText>
+                                    <MudText Typo="Typo.body2"><b>@penalty.PenaltyAmount.ToString("N0")</b></MudText>
+                                </MudItem>
+                                <MudItem xs="4">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Paid</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Success">@penalty.AmountPaid.ToString("N0")</MudText>
+                                </MudItem>
+                                <MudItem xs="4">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Balance</MudText>
+                                    <MudText Typo="Typo.body2" Color="@(penalty.CurrentBalance > 0 ? Color.Error : Color.Default)">
+                                        <b>@penalty.CurrentBalance.ToString("N0")</b>
+                                    </MudText>
+                                </MudItem>
+                            </MudGrid>
+
+                            <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-2">
+                                @if (penalty.Status == "Active" && penalty.CurrentBalance > 0)
+                                {
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" 
+                                               StartIcon="@Icons.Material.Filled.Gavel" 
+                                               OnClick="@(() => OpenWaiveDialog(penalty.Id))">Waive</MudButton>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Success" Class="d-flex align-center">
+                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1"/> Settled
+                                    </MudText>
+                                }
+                            </MudStack>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+            }
+        }
+    </MudGrid>
+</MudContainer>
 
 @code {
-    private List<Penalty> _penalties = new();
     private bool _loading = true;
+    private string _searchString = "";
+    private List<PenaltyDTO> _penalties = new();
 
-    protected override async Task OnInitializedAsync() => await LoadPenalties();
+    private IEnumerable<PenaltyDTO> _filteredPenalties => _penalties
+        .Where(x => string.IsNullOrWhiteSpace(_searchString) || 
+                    (x.Remarks?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (x.Status?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false));
 
-    private async Task LoadPenalties()
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshData();
+    }
+
+    private async Task RefreshData()
     {
         _loading = true;
-        try { _penalties = await PenaltyService.GetAllPenaltiesAsync(); }
-        finally { _loading = false; }
-    }
-
-    private async Task OpenCreateDialog()
-    {
-        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
-        var parameters = new DialogParameters { ["PenaltyId"] = 0 };
-        var dialog = await DialogService.ShowAsync<PenaltyDialog>("Add Penalty", parameters, options);
-        var result = await dialog.Result;
-        if (!result.Canceled) await LoadPenalties();
-    }
-
-    private async Task OpenUpdateDialog(Penalty penalty)
-    {
-        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
-        var parameters = new DialogParameters { ["PenaltyId"] = penalty.Id };
-        var dialog = await DialogService.ShowAsync<PenaltyDialog>("Update Penalty", parameters, options);
-        var result = await dialog.Result;
-        if (!result.Canceled) await LoadPenalties();
-    }
-
-    private async Task DeletePenalty(int id)
-    {
         try
         {
-            await PenaltyService.DeletePenaltyAsync(id);
-            Snackbar.Add("Penalty deleted", Severity.Success);
-            await LoadPenalties();
+            var data = await PenaltyService.GetPenaltiesByLoanIdAsync(0); 
+            _penalties = data.ToList();
         }
-        catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Active" => Color.Warning,
+        "Paid" => Color.Success,
+        "Waived" => Color.Default,
+        _ => Color.Info
+    };
+
+    private async Task OpenWaiveDialog(int penaltyId)
+    {
+        var parameters = new DialogParameters { ["PenaltyId"] = penaltyId };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<WaivePenaltyDialog>("Confirm Waiver", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled) await RefreshData();
     }
 }

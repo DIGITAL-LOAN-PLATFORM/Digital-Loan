@@ -1,86 +1,117 @@
 @page "/payments"
+@using Application.DTO
 @using Application.Interface
-@using Domain.Entities
-@using MudBlazor
+@using System.Threading
 @inject IPaymentService PaymentService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
-<PageTitle>Payments</PageTitle>
-<MudText Typo="Typo.h4" Class="mb-4">Payments</MudText>
+<MudText Typo="Typo.h4" GutterBottom="true">Loan Payments</MudText>
 
-<MudTable Items="@_payments" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Elevation="2">
-    <ToolBarContent>
-        <MudText Typo="Typo.h6">All Payments</MudText>
-        <MudSpacer />
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add">
-            Record Payment
-        </MudButton>
-    </ToolBarContent>
-    <HeaderContent>
-        <MudTh>ID</MudTh>
-        <MudTh>Loan Disbursement</MudTh>
-        <MudTh>Amount Paid</MudTh>
-        <MudTh>Penalty Allocated</MudTh>
-        <MudTh>Payment Type</MudTh>
-        <MudTh>Account</MudTh>
-        <MudTh>Payment Date</MudTh>
-        <MudTh>Actions</MudTh>
-    </HeaderContent>
-    <RowTemplate>
-        <MudTd DataLabel="ID">@context.Id</MudTd>
-        <MudTd DataLabel="Loan Disbursement">@context.LoanDisbursementId</MudTd>
-        <MudTd DataLabel="Amount Paid">@context.TotalAmountPaid.ToString("N2")</MudTd>
-        <MudTd DataLabel="Penalty Allocated">@context.PenaltyAllocated.ToString("N2")</MudTd>
-        <MudTd DataLabel="Payment Type">@context.PaymentType?.Name</MudTd>
-        <MudTd DataLabel="Account">@context.Account?.Id</MudTd>
-        <MudTd DataLabel="Payment Date">@context.PaymentDate.ToString("dd/MM/yyyy")</MudTd>
-        <MudTd>
-            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" OnClick="@(() => OpenUpdateDialog(context))" />
-            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeletePayment(context.Id))" />
-        </MudTd>
-    </RowTemplate>
-</MudTable>
+<MudPaper Elevation="25" Class="pa-4">
+    <MudTable Items="@_payments" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" 
+              LoadingProgressColor="Color.Info" T="PaymentDTO">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Recent Transactions</MudText>
+            <MudSpacer />
+            <MudButton Variant="Variant.Outlined" 
+                       Color="Color.Secondary" 
+                       OnClick="LoadPayments" 
+                       Class="mr-2"
+                       StartIcon="@Icons.Material.Filled.Refresh">
+                Refresh
+            </MudButton>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add" 
+                       OnClick="OpenPaymentDialog"
+                       Disabled="@_loading">
+                Process New Payment
+            </MudButton>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Date</MudTh>
+            <MudTh>Loan Ref</MudTh>
+            <MudTh>Borrower</MudTh>
+            <MudTh>Total Paid</MudTh>
+            <MudTh>Principal</MudTh>
+            <MudTh>Interest</MudTh>
+            <MudTh>Penalty</MudTh>
+            <MudTh>Reference</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Date">@context.PaymentDate.ToString("dd MMM yyyy")</MudTd>
+            <MudTd DataLabel="Loan Ref">@context.LoanReferenceNumber</MudTd>
+            <MudTd DataLabel="Borrower">@context.BorrowerName</MudTd>
+            <MudTd DataLabel="Total Paid"><b>@context.TotalAmountPaid.ToString("N0") RWF</b></MudTd>
+            <MudTd DataLabel="Principal" Style="color:green">@context.PrincipalAllocated.ToString("N0")</MudTd>
+            <MudTd DataLabel="Interest" Style="color:blue">@context.InterestAllocated.ToString("N0")</MudTd>
+            <MudTd DataLabel="Penalty" Style="color:red">@context.PenaltyAllocated.ToString("N0")</MudTd>
+            <MudTd DataLabel="Reference">@context.TransactionReference</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            @if (!_loading)
+            {
+                <MudText Align="Align.Center" Class="pa-4">No payments found in the system. Try refreshing or adding a new payment.</MudText>
+            }
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+</MudPaper>
 
 @code {
-    private List<Payment> _payments = new();
+    private IEnumerable<PaymentDTO> _payments = new List<PaymentDTO>();
     private bool _loading = true;
 
-    protected override async Task OnInitializedAsync() => await LoadPayments();
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPayments();
+    }
 
-    private async Task LoadPayments()
+  private async Task LoadPayments()
+{
+    try 
     {
         _loading = true;
-        try { _payments = await PaymentService.GetAllPaymentsAsync(); }
-        finally { _loading = false; }
-    }
+        StateHasChanged(); 
 
-    private async Task OpenCreateDialog()
-    {
-        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
-        var parameters = new DialogParameters { ["PaymentId"] = 0 };
-        var dialog = await DialogService.ShowAsync<PaymentDialog>("Record Payment", parameters, options);
-        var result = await dialog.Result;
-        if (!result.Canceled) await LoadPayments();
+        // CHANGE THIS LINE: Use the "GetAll" method you just added to your service
+        var result = await PaymentService.GetAllPaymentsAsync();
+        
+        _payments = result ?? new List<PaymentDTO>();
     }
+    catch (Exception ex)
+    {
+        Snackbar.Add("Load Error: " + ex.Message, Severity.Error);
+    }
+    finally 
+    {
+        _loading = false;
+        StateHasChanged(); 
+    }
+}
 
-    private async Task OpenUpdateDialog(Payment payment)
-    {
-        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
-        var parameters = new DialogParameters { ["PaymentId"] = payment.Id };
-        var dialog = await DialogService.ShowAsync<PaymentDialog>("Update Payment", parameters, options);
-        var result = await dialog.Result;
-        if (!result.Canceled) await LoadPayments();
-    }
+    private async Task OpenPaymentDialog()
+{
+    var options = new DialogOptions { 
+        CloseOnEscapeKey = true, 
+        MaxWidth = MaxWidth.Medium, 
+        FullWidth = true,
+        BackdropClick = false // Fixed the property name here
+    };
 
-    private async Task DeletePayment(int id)
+    var dialog = await DialogService.ShowAsync<PaymentDialog>("Process Payment", options);
+    var result = await dialog.Result;
+
+    // Check if the dialog was closed with a 'Success' result
+    if (result != null && !result.Canceled)
     {
-        try
-        {
-            await PaymentService.DeletePaymentAsync(id);
-            Snackbar.Add("Payment deleted", Severity.Success);
-            await LoadPayments();
-        }
-        catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        // This is the critical part that refreshes the UI table
+        await LoadPayments(); 
+        
+        Snackbar.Add("Payment list updated successfully.", Severity.Success);
     }
+}
 }

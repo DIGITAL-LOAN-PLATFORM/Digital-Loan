@@ -1,79 +1,89 @@
-using Application.Interface;
-using Application.DTO;
 using Domain.Entities;
+using Domain.Interface;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Infrastructure.Repositories
 {
     public class PenaltyRepository : IPenalty
     {
-        private readonly ApplicationDbContext _dbContext;
+        private readonly ApplicationDbContext _context;
 
         public PenaltyRepository(ApplicationDbContext context)
         {
-            _dbContext = context;
+            _context = context;
         }
 
         public async Task<Penalty?> GetByIdAsync(int id)
         {
-            return await _dbContext.Penalties
-                .Include(p => p.LoanDisbursement)
+            return await _context.Penalties
                 .Include(p => p.PenaltyReason)
+                .Include(p => p.LoanDisbursement)
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
-        public async Task<List<Penalty>> GetAllPenaltiesAsync()
+        public async Task<IEnumerable<Penalty>> GetByLoanIdAsync(int loanDisbursementId)
         {
-            return await _dbContext.Penalties
-                .Include(p => p.LoanDisbursement)
-                .Include(p => p.PenaltyReason)
-                .ToListAsync();
-        }
-
-        public async Task<List<Penalty>> GetPenaltiesByLoanDisbursementIdAsync(int loanDisbursementId)
-        {
-            return await _dbContext.Penalties
-                .Include(p => p.LoanDisbursement)
-                .Include(p => p.PenaltyReason)
+            return await _context.Penalties
                 .Where(p => p.LoanDisbursementId == loanDisbursementId)
+                .OrderByDescending(p => p.EventDate)
                 .ToListAsync();
         }
 
-        public async Task CreatePenaltyAsync(CreatePenaltyDTO penaltyDto)
+        public async Task<IEnumerable<Penalty>> GetUnpaidPenaltiesByLoanIdAsync(int loanDisbursementId)
         {
-            var newPenalty = new Penalty
+            // Selects only Active penalties where there is still money owed
+            // This is the "Queue" for the Payment Waterfall
+            return await _context.Penalties
+                .Where(p => p.LoanDisbursementId == loanDisbursementId && 
+                            p.Status == PenaltyStatus.Active && 
+                            p.CurrentBalance > 0)
+                .OrderBy(p => p.EventDate) // Oldest penalties get paid first
+                .ToListAsync();
+        }
+
+        public async Task<bool> AddAsync(Penalty penalty)
+        {
+            // Ensure CurrentBalance matches the initial PenaltyAmount on creation
+            penalty.CurrentBalance = penalty.PenaltyAmount - penalty.AmountPaid;
+            
+            await _context.Penalties.AddAsync(penalty);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> UpdateAsync(Penalty penalty)
+        {
+            // Recalculate balance before saving to prevent manual math errors
+            penalty.CurrentBalance = penalty.PenaltyAmount - penalty.AmountPaid;
+            
+            // Auto-set status to Paid if balance hits zero
+            if (penalty.CurrentBalance <= 0 && penalty.Status == PenaltyStatus.Active)
             {
-                LoanDisbursementId = penaltyDto.LoanDisbursementId,
-                PenaltyAmount = penaltyDto.PenaltyAmount,
-                ReasonId = penaltyDto.ReasonId,
-                ConfirmedByUserId = penaltyDto.ConfirmedByUserId,
-                CreatedAt = DateTime.UtcNow
-            };
+                penalty.Status = PenaltyStatus.Paid;
+            }
 
-            await _dbContext.Penalties.AddAsync(newPenalty);
-            await _dbContext.SaveChangesAsync();
+            _context.Penalties.Update(penalty);
+            return await _context.SaveChangesAsync() > 0;
         }
 
-        public async Task UpdatePenaltyAsync(int id, UpdatePenaltyDTO penaltyDto)
+        public async Task<bool> PenaltyExistsForDateAsync(int loanDisbursementId, DateTime eventDate)
         {
-            var existingPenalty = await _dbContext.Penalties.FindAsync(id);
-            if (existingPenalty == null) return;
-
-            existingPenalty.PenaltyAmount = penaltyDto.PenaltyAmount;
-            existingPenalty.ReasonId = penaltyDto.ReasonId;
-            existingPenalty.ConfirmedByUserId = penaltyDto.ConfirmedByUserId;
-
-            await _dbContext.SaveChangesAsync();
+            // Prevents the system from double-charging a penalty for the same late day
+            return await _context.Penalties.AnyAsync(p => 
+                p.LoanDisbursementId == loanDisbursementId && 
+                p.EventDate.Date == eventDate.Date &&
+                p.Status != PenaltyStatus.Waived);
         }
-
-        public async Task DeletePenaltyAsync(int id)
-        {
-            var penalty = await _dbContext.Penalties.FindAsync(id);
-            if (penalty == null) return;
-
-            _dbContext.Penalties.Remove(penalty);
-            await _dbContext.SaveChangesAsync();
-        }
+      public async Task<IEnumerable<RepaymentScheduleItem>> GetNewlyOverdueInstallmentsAsync()
+{
+    return await _context.RepaymentScheduleItems
+        .Where(x => x.DueDate < DateTime.Today && 
+                    !x.IsPaid && 
+                    x.LastPenaltyDate == null) 
+        .ToListAsync();
+}
     }
 }

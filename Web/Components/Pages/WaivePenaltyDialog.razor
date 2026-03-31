@@ -1,0 +1,42 @@
+@using Application.Interfaces
+@using MudBlazor
+@using Application.Interface
+@inject IPenaltyService PenaltyService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>Confirm Penalty Waiver</TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-4">Are you sure you want to waive this penalty? This action cannot be undone.</MudText>
+        <MudTextField @bind-Value="Reason" Label="Reason for Waiver" Variant="Variant.Outlined" 
+                      Lines="3" Required="true" Placeholder="e.g., Borrower provided medical proof of delay" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="Submit" 
+                   Disabled="@(string.IsNullOrWhiteSpace(Reason))">Confirm Waiver</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public int PenaltyId { get; set; }
+    public string Reason { get; set; }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        // Assuming your service has this method
+        bool success = await PenaltyService.WaivePenaltyAsync(PenaltyId, Reason, "AdminUser");
+        if (success)
+        {
+            Snackbar.Add("Penalty waived successfully", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        else
+        {
+            Snackbar.Add("Failed to waive penalty", Severity.Error);
+        }
+    }
+}

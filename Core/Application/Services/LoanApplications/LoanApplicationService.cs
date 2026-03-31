@@ -1,16 +1,25 @@
 using Application.DTO;
 using Application.Interfaces;
+using Application.Interface;
+using Application.Services;
 using Domain.Entities;
 
-namespace Application.Services
+namespace Application.Services.LoanApplications
 {
     public class LoanApplicationService : ILoanApplicationService
     {
         private readonly ILoanApplication _repository;
+        private readonly ILoanProductService _loanProductService;
+        private readonly IPaymentModalityService _paymentModalityService;
 
-        public LoanApplicationService(ILoanApplication repository)
+        public LoanApplicationService(
+            ILoanApplication repository,
+            ILoanProductService loanProductService,
+            IPaymentModalityService paymentModalityService)
         {
             _repository = repository;
+            _loanProductService = loanProductService;
+            _paymentModalityService = paymentModalityService;
         }
 
         public async Task<IEnumerable<LoanApplicationDTO>> GetAllApplicationsAsync()
@@ -33,17 +42,29 @@ namespace Application.Services
 
         public async Task<LoanApplicationDTO> CreateApplicationAsync(LoanApplicationDTO dto)
         {
-            // 1. Generate the unique ID (e.g., LN-2026-001)
             dto.ApplicationNumber = await GenerateNewApplicationNumberAsync();
             dto.DateOfApplication = DateTime.Now;
             dto.Status = "Pending";
 
+            // Validate FKs
+            var product = await _loanProductService.GetProductByIdAsync(dto.loanProductId);
+            if (product == null)
+            {
+                throw new ArgumentException($"Loan product ID {dto.loanProductId} not found.");
+            }
+
+            var modality = await _paymentModalityService.GetByIdAsync(dto.paymentModalityId);
+            if (modality == null)
+            {
+                throw new ArgumentException($"Payment modality ID {dto.paymentModalityId} not found.");
+            }
+
             var entity = new LoanApplication
             {
                 ApplicationNumber = dto.ApplicationNumber,
-                ProductId = dto.ProductId,
+                loanProductId = dto.loanProductId,
                 BorrowerId = dto.BorrowerId,
-                ModalityId = dto.ModalityId,
+                paymentModalityId = dto.paymentModalityId,
                 RequestedAmount = dto.RequestedAmount,
                 LoanTerm = dto.LoanTerm,
                 Purpose = dto.Purpose,
@@ -82,38 +103,31 @@ namespace Application.Services
         {
             int year = DateTime.Now.Year;
             int count = await _repository.GetCountForYearAsync(year);
-            // Formats to: LN-2026-001, LN-2026-002, etc.
             return $"LN-{year}-{(count + 1).ToString("D3")}";
         }
 
-        // Internal Helper for Mapping
-      private LoanApplicationDTO MapToDto(LoanApplication app)
-{
-    return new LoanApplicationDTO
-    {
-        Id = app.Id,
-        ApplicationNumber = app.ApplicationNumber,
-        ProductId = app.ProductId,
-        ProductName = app.loanProduct?.ProductName,
-        BorrowerId = app.BorrowerId,
-        
-        // FIX: Concatenate FirstName and LastName
-        BorrowerName = app.Borrower != null 
-            ? $"{app.Borrower.FirstName} {app.Borrower.LastName}" 
-            : "Unknown Borrower",
-
-        RequestedAmount = app.RequestedAmount,
-        LoanTerm = app.LoanTerm,
-        Status = app.Status ?? "Pending",
-        DateOfApplication = app.DateOfApplication,
-        
-        Guarantors = app.Guarantors.Select(g => new GuarantorDTO 
-        { 
-            Id = g.Id, 
-            Name = g.Name,
-            Phone = g.Phone 
-        }).ToList()
-    };
-}
+        private LoanApplicationDTO MapToDto(LoanApplication app)
+        {
+            return new LoanApplicationDTO
+            {
+                Id = app.Id,
+                ApplicationNumber = app.ApplicationNumber,
+                loanProductId = app.loanProductId,
+                ProductName = app.loanProduct?.ProductName ?? "Unknown",
+                ProductInterestRate = app.loanProduct?.InterestRate,
+                BorrowerId = app.BorrowerId,
+                BorrowerName = app.Borrower != null ? $"{app.Borrower.FirstName} {app.Borrower.LastName}" : $"ID: {app.BorrowerId}",
+                paymentModalityId = app.paymentModalityId,
+                ModalityName = app.paymentModality != null ? app.paymentModality.ToString() : "Unknown",
+                RequestedAmount = app.RequestedAmount,
+                LoanTerm = app.LoanTerm,
+                Purpose = app.Purpose,
+                Status = app.Status ?? "Pending",
+                DateOfApplication = app.DateOfApplication,
+                Guarantors = app.Guarantors.Select(g => new GuarantorDTO { Id = g.Id, Name = g.Name, Phone = g.Phone }).ToList(),
+                ProvidedDocuments = app.ProvidedDocuments.Select(d => new ProvidedDocumentDTO { Id = d.Id, DocumentName = d.DocumentName }).ToList()
+            };
+        }
     }
 }
+

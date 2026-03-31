@@ -1,37 +1,69 @@
-using Application.DTO;
 using Application.Interfaces;
+using Application.DTO;
 using Domain.Entities;
 
 namespace Application.Services.RequiredDocuments
 {
     public class RequiredDocumentService : IRequiredDocumentService
     {
-        private readonly IRequiredDocument _RequiredDocument;
+        private readonly IRequiredDocument _repository;
 
-        
-        public RequiredDocumentService(IRequiredDocument requiredDocument)
+        public RequiredDocumentService(IRequiredDocument repository)
         {
-            _RequiredDocument = requiredDocument;
+            _repository = repository;
         }
 
-        public RequiredDocument? GetRequiredDocumentById(int id)
+        /// <summary>
+        /// Fetches all documents based on the provided filter.
+        /// Handles the null-filter scenario to prevent NullReferenceExceptions in the repository.
+        /// </summary>
+        public async Task<List<RequiredDocument>> GetAllRequiredDocumentsAsync(FilterRequiredDocumentDTO? filter = null)
         {
-            return _RequiredDocument.GetRequiredDocumentById(id);
+            // Safety Check: If the UI passes null, we provide an empty DTO 
+            // so the repository doesn't crash when accessing filter.SearchTerm
+            filter ??= new FilterRequiredDocumentDTO();
+
+            // We wrap the synchronous repository call in Task.Run to keep the UI thread responsive
+            return await Task.Run(() => _repository.GetAllRequiredDocuments(filter));
         }
 
-        public List<RequiredDocument> GetAllRequiredDocuments(FilterRequiredDocumentDTO filter)
+        /// <summary>
+        /// Retrieves a single document by its unique identifier.
+        /// </summary>
+        public async Task<RequiredDocument?> GetRequiredDocumentByIdAsync(int id)
         {
-            return _RequiredDocument.GetAllRequiredDocuments(filter);
+            return await Task.Run(() => _repository.GetRequiredDocumentById(id));
         }
 
-        public void CreateRequiredDocument(CreateRequiredDocumentDTO requiredDocumentDTO)
+        /// <summary>
+        /// Maps the Create DTO to a new entity via the repository.
+        /// Returns 1 to indicate success (or you can modify the repository to return the new ID).
+        /// </summary>
+        public async Task<int> CreateRequiredDocumentAsync(CreateRequiredDocumentDTO dto)
         {
-            _RequiredDocument.CreateRequiredDocument(requiredDocumentDTO);
+            return await Task.Run(() =>
+            {
+                _repository.CreateRequiredDocument(dto);
+                return 1; 
+            });
         }
 
-        public void UpdateRequiredDocument(int id, UpdateRequiredDocumentDTO requiredDocumentDTO)
+        /// <summary>
+        /// Updates an existing document's details.
+        /// </summary>
+        public async Task UpdateRequiredDocumentAsync(int id, UpdateRequiredDocumentDTO dto)
         {
-            _RequiredDocument.UpdateRequiredDocument(id, requiredDocumentDTO);
+            await Task.Run(() => _repository.UpdateRequiredDocument(id, dto));
+        }
+
+        /// <summary>
+        /// Logic for deleting a document (if implemented in your repository).
+        /// </summary>
+        public async Task DeleteRequiredDocumentAsync(int id)
+        {
+            // If your IRequiredDocument interface doesn't have Delete yet, 
+            // you'll need to add it there and in the Repository first.
+            await Task.CompletedTask; 
         }
     }
 }

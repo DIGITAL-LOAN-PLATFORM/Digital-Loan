@@ -1,5 +1,11 @@
 namespace Application.DTO
 {
+    public class RequiredDocumentDTO
+    {
+        public int Id { get; set; }
+        public string? DocumentName { get; set; }
+        public string? DocumentType { get; set; }
+    }
     public class CreateRequiredDocumentDTO
     {
         public string? DocumentName { get; set; }

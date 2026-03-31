@@ -1,7 +1,7 @@
 @using Application.DTO
 @using MudBlazor
 
-<MudDialog>
+<MudDialog T="object">
     <TitleContent>
         <MudText Typo="Typo.h6">@Title</MudText>
     </TitleContent>
@@ -40,8 +40,8 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
-
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    
     [Parameter] public bool IsCreate { get; set; } = true;
     [Parameter] public CreateRequiredDocumentDTO? CreateModel { get; set; }
     [Parameter] public UpdateRequiredDocumentDTO? UpdateModel { get; set; }
@@ -71,3 +71,4 @@
         }
     }
 }
+

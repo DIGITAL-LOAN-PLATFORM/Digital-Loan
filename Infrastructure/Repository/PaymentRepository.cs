@@ -1,6 +1,5 @@
-using Application.Interface;
-using Application.DTO;
 using Domain.Entities;
+using Application.Interface;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,73 +7,74 @@ namespace Infrastructure.Repositories
 {
     public class PaymentRepository : IPayment
     {
-        private readonly ApplicationDbContext _dbContext;
+        private readonly ApplicationDbContext _context;
 
         public PaymentRepository(ApplicationDbContext context)
         {
-            _dbContext = context;
+            _context = context;
         }
 
         public async Task<Payment?> GetByIdAsync(int id)
         {
-            return await _dbContext.Payments
-                .Include(p => p.LoanDisbursement)
+            return await _context.Payments
+                .Include(p => p.PaymentType)
                 .Include(p => p.Account)
+                .Include(p => p.LoanDisbursement)
+                    .ThenInclude(ld => ld.LoanApplication)
+                        .ThenInclude(la => la.Borrower)
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
-        public async Task<List<Payment>> GetAllPaymentsAsync()
-        {
-            return await _dbContext.Payments
-                .Include(p => p.LoanDisbursement)
-                .Include(p => p.Account)
-                .ToListAsync();
-        }
-
-        public async Task<List<Payment>> GetPaymentsByLoanDisbursementIdAsync(int loanDisbursementId)
-        {
-            return await _dbContext.Payments
-                .Include(p => p.LoanDisbursement)
-                .Include(p => p.Account)
-                .Where(p => p.LoanDisbursementId == loanDisbursementId)
-                .ToListAsync();
-        }
-
-        public async Task CreatePaymentAsync(CreatePaymentDTO paymentDto)
-        {
-         var newPayment = new Payment
-    {
-        LoanDisbursementId = paymentDto.LoanDisbursementId,
-        TotalAmountPaid = paymentDto.TotalAmountPaid,
-        PenaltyAllocated = paymentDto.PenaltyAllocated,
-        PaymentTypeId = paymentDto.PaymentTypeId,  
-        PaymentDate = paymentDto.PaymentDate
-    };
-
-    await _dbContext.Payments.AddAsync(newPayment);
-    await _dbContext.SaveChangesAsync();
-}
-
-     public async Task UpdatePaymentAsync(int id, UpdatePaymentDTO paymentDto)
+      public async Task<IEnumerable<Payment>> GetAllAsync()
 {
-    var existingPayment = await _dbContext.Payments.FindAsync(id);
-    if (existingPayment == null) return;
-
-    existingPayment.TotalAmountPaid = paymentDto.TotalAmountPaid;
-    existingPayment.PenaltyAllocated = paymentDto.PenaltyAllocated;
-    existingPayment.PaymentTypeId = paymentDto.PaymentTypeId;  
-    existingPayment.PaymentDate = paymentDto.PaymentDate;
-
-    await _dbContext.SaveChangesAsync();
+    return await _context.Payments
+        .Include(p => p.PaymentType)
+        .Include(p => p.LoanDisbursement)
+            .ThenInclude(ld => ld.LoanApplication)
+                .ThenInclude(la => la.Borrower) // CRITICAL: This was missing
+        .OrderByDescending(p => p.PaymentDate)
+        .AsNoTracking()
+        .ToListAsync();
 }
 
-        public async Task DeletePaymentAsync(int id)
+        public async Task<IEnumerable<Payment>> GetByLoanIdAsync(int loanDisbursementId)
         {
-            var payment = await _dbContext.Payments.FindAsync(id);
-            if (payment == null) return;
+            // This is used by your PaymentService to show history for a specific loan
+            return await _context.Payments
+                .Where(p => p.LoanDisbursementId == loanDisbursementId)
+                .Include(p => p.PaymentType)
+                .OrderByDescending(p => p.PaymentDate)
+                .AsNoTracking()
+                .ToListAsync();
+        }
 
-            _dbContext.Payments.Remove(payment);
-            await _dbContext.SaveChangesAsync();
+        public async Task<bool> AddAsync(Payment payment)
+        {
+            // This is triggered by ProcessLoanPaymentAsync in your service
+            await _context.Payments.AddAsync(payment);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> UpdateAsync(Payment payment)
+        {
+            _context.Entry(payment).State = EntityState.Modified;
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> DeleteAsync(int id)
+        {
+            var payment = await _context.Payments.FindAsync(id);
+            if (payment == null) return false;
+
+            _context.Payments.Remove(payment);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<decimal> GetTotalCollectedAsync(DateTime start, DateTime end)
+        {
+            return await _context.Payments
+                .Where(p => p.PaymentDate >= start && p.PaymentDate <= end)
+                .SumAsync(p => p.TotalAmountPaid);
         }
     }
 }

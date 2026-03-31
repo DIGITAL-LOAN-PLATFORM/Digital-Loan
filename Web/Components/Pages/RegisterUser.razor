@@ -1,0 +1,84 @@
+@page "/register"
+@using Application.Service
+@using Infrastructure.Identity
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@using Application.Services
+@using Application.DTO
+@inject IIdentityService IdentityService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Users</PageTitle>
+
+<MudPaper Class="pa-4">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        @* <h3>Campaigns</h3> *@
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(()=>OpenDialog())">Register User</MudButton>
+    </div>
+
+    <MudDataGrid Items="@users" Hoverable="true" Striped="true" Bordered="true" Class="mud-elevation-1">
+        <Columns>
+            <PropertyColumn Property="x => x.Id" Title="Id" />
+            <PropertyColumn Property="x => x.FirstName" Title="FirstName" />
+            <PropertyColumn Property="x => x.LastName" Title="LastName" />
+            <PropertyColumn Property="x => x.Email" Title="Email" />
+              <PropertyColumn Property="x => x.PhoneNumber" Title="Phone Number" />
+            <TemplateColumn Title="Actions" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudButton Href="@($"/Users/{context.Item.Id}")" 
+                               Variant="Variant.Filled" 
+                               Color="Color.Info"
+                               Size="Size.Small"
+                               Class="mx-1">
+                        View Details
+                    </MudButton>
+                    <MudButton Href="@($"/Users/edit/{context.Item.Id}")" 
+                               Variant="Variant.Filled" 
+                               Color="Color.Warning" 
+                               StartIcon="@Icons.Material.Filled.Edit"
+                               Size="Size.Small"
+                               Class="mx-1">
+                        Edit
+                    </MudButton>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+    </MudDataGrid>
+
+ </MudPaper>
+    
+
+@code 
+{
+   bool disabled = false;
+    private List<UserDetailDTO> users = new List<UserDetailDTO>();
+        private bool laoding = false;
+    protected override async Task  OnInitializedAsync()
+    {
+        users = await IdentityService.GetAllUsers();
+    }
+
+     private async Task OpenDialog()
+{
+    var dialog = await DialogService.ShowAsync<RegisterUserDialog>("Register User");
+    var result = await dialog.Result;
+    
+    // This check only passes if you call DialogInstance.Close(DialogResult.Ok(true))
+    if (!result.Canceled)
+    {
+        // Refresh the list from the database
+        users = await IdentityService.GetAllUsers();
+        
+        // Tell Blazor to re-render the DataGrid with the new data
+        StateHasChanged(); 
+    }
+}
+   
+}
+
+    
+
+
+

@@ -1,67 +1,67 @@
-
-using Infrastructure.Data;
-
-using Infrastructure.Repositories;
-using Microsoft.EntityFrameworkCore; 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
-using Application.Services.Locations;
-
-using Domain.Entities;
-using Infrastructure.Repository;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Http;
+using Infrastructure.Data;
+using Infrastructure.Identity;
+using Infrastructure.Repositories;
+using Application.Interface;
 using Application.Interfaces;
-
+using Infrastructure.Repository;
+using Domain.Interface;
 
 namespace Infrastructure.DependencyInjection
 {
     public static class ServiceContainer
     {
-        public static IServiceCollection AddInfrastructureService(this IServiceCollection services, IConfiguration configuration)
+        // Renamed to AddInfrastructureServices (Plural) to match Program.cs standard
+        public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
         {
-            services.AddDbContext<Data.ApplicationDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DigitalLoanMSSQLConnection")));
-            
-            //Register identity services
-            
+            // 1. Register DbContext with SplitQuery to resolve the performance warning
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"),
+                    sqlOptions => sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 
-            //Register Repositories
-           
-            services.AddScoped<IAccount , AccountRepository>();
-          
-            // Add infrastructure services here, e.g., DbContext, Repositories, etc.
-            
-            );
+            // 2. Identity Configuration
+            services.AddIdentity<User, IdentityRole<int>>(options => {
+                options.Password.RequireDigit = true;
+                options.Password.RequiredLength = 6;
+                options.User.RequireUniqueEmail = true;
+            })
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
 
-            // // Register identity service
-            // services.AddAuthenticationService(configuration);
+            // 3. Cookie Settings
+            services.ConfigureApplicationCookie(options =>
+            {
+                options.Cookie.Name = "DigitalLoan.Identity";
+                options.LoginPath = "/login";
+                options.LogoutPath = "/logout";
+                options.AccessDeniedPath = "/access-denied";
+            });
 
-            // // Register User Context (for accessing current user anywhere)
-            // services.AddHttpContextAccessor();
-            // services.AddScoped<IUserContext, UserContext>();
- 
-                // Register repositories
-                services.AddScoped<IBorrower, BorrowerRepository>();
-                services.AddScoped<IGuarantorType, GuarantorTypeRepository>();
-                services.AddScoped<IPaymentModality, PaymentModalityRepository>();
-                services.AddScoped<ILoanProduct, LoanProductRepository>();
-                services.AddScoped<IGuarantor, GuarantorRepository>();
-                services.AddScoped<ILoanApplication, LoanApplicationRepository>();
-                services.AddScoped<global::Application.Interface.ILocationService, global::Application.Services.Locations.LocationService>();
-                // ILocationService directly registered via app services (in Program.cs)
-                services.AddScoped<IPayment, PaymentRepository>();
-                services.AddScoped<IPaymentType, PaymentTypeRepository>();
-                services.AddScoped<IReason, ReasonRepository>();
-                services.AddScoped<IPenalty, PenaltyRepository>();
-
-            // Register Repositories 
+            // 4. Repositories Mapping
+            services.AddScoped<IAccount, AccountRepository>();
+            services.AddScoped<IBorrower, BorrowerRepository>();
+            services.AddScoped<IGuarantor, GuarantorRepository>();
+            services.AddScoped<IGuarantorType, GuarantorTypeRepository>();
+            services.AddScoped<ILoanApplication, LoanApplicationRepository>();
+            services.AddScoped<ILoanDisbursement, LoanDisbursementRepository>();
+            services.AddScoped<ILoanProduct, LoanProductRepository>();
+            services.AddScoped<IPayment, PaymentRepository>();
+            services.AddScoped<IPaymentModality, PaymentModalityRepository>();
+            services.AddScoped<IPaymentType, PaymentTypeRepository>();
+            services.AddScoped<IPenalty, PenaltyRepository>();
+            services.AddScoped<IReason, ReasonRepository>();
             services.AddScoped<IRequiredDocument, RequiredDocumentRepository>();
-            // services.AddScoped<IGuest, GuestRepository>();
-            // services.AddScoped<IIdentity, IdentityRepository>();
+            services.AddScoped<ILoanRequirements, LoanRequirementsRepository>();
+            services.AddScoped<IIdentity, IdentityRepository>();
+            services.AddScoped<IProcessFeeDeposit, ProcessFeeDepositRepository>();
+            services.AddScoped<IProvidedDocument, ProvidedDocumentRepository>();
+            
 
-            // Register Data Seeder
-            // services.AddScoped<IDataSeeder, DataSeeder>();
-
+            services.AddHttpContextAccessor();
 
             return services;
         }

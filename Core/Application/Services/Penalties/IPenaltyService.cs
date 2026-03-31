@@ -1,15 +1,20 @@
-using Domain.Entities;
 using Application.DTO;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace Application.Interface
+namespace Application.Interfaces
 {
     public interface IPenaltyService
     {
-        Task<Penalty?> GetByIdAsync(int id);
-        Task<List<Penalty>> GetAllPenaltiesAsync();
-        Task<List<Penalty>> GetPenaltiesByLoanDisbursementIdAsync(int loanDisbursementId);
-        Task CreatePenaltyAsync(CreatePenaltyDTO penaltyDto);
-        Task UpdatePenaltyAsync(int id, UpdatePenaltyDTO penaltyDto);
-        Task DeletePenaltyAsync(int id);
+        // The core "Day 1" engine
+        Task<int> ApplyDayOnePenaltiesAsync();
+        
+        // Retrieval methods
+        Task<PenaltyDTO?> GetPenaltyByIdAsync(int id);
+        Task<IEnumerable<PenaltyDTO>> GetPenaltiesByLoanIdAsync(int loanDisbursementId);
+        
+        // Management Actions
+        Task<bool> WaivePenaltyAsync(int penaltyId, string reason, string managerUserId);
+        Task<bool> ConfirmPenaltyAsync(int penaltyId, string managerUserId);
     }
 }

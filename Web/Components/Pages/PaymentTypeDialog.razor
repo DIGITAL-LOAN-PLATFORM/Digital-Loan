@@ -31,7 +31,7 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [CascadingParameter] MudDialogInstance Dialog { get; set; } = null!;
     [Parameter] public int PaymentTypeId { get; set; } = 0;
 
     private MudForm? form;
@@ -41,7 +41,7 @@
     private async Task Submit()
     {
         if (form == null) return;
-        await form.ValidateAsync();
+        await form.Validate();
         if (!form.IsValid) return;
 
         _processing = true;
@@ -57,11 +57,12 @@
                 await PaymentTypeService.UpdatePaymentTypeAsync(PaymentTypeId, new UpdatePaymentTypeDTO { Name = _model.Name });
                 Snackbar.Add("Payment type updated successfully", Severity.Success);
             }
-            MudDialog.Close(DialogResult.Ok(true));
+            Dialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); }
         finally { _processing = false; }
     }
 
-    private void Cancel() => MudDialog.Cancel();
+    private void Cancel() => Dialog.Cancel();
 }
+
